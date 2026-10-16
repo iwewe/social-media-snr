@@ -4,6 +4,7 @@ Seluruh konfigurasi sensitif dibaca dari environment variable. Tidak ada rahasia
 """
 
 import os
+from datetime import timedelta
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -35,6 +36,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "axes",
     # Aplikasi SNR. App reporting sengaja belum ada: desain laporan ditunda (FR-096).
     "accounts",
     "investigations",
@@ -49,8 +51,11 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # FR-006: seluruh view wajib login secara default. Pengecualian hanya lewat @login_not_required.
+    "django.contrib.auth.middleware.LoginRequiredMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "axes.middleware.AxesMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -117,3 +122,21 @@ SNR_BROWSER_PROFILES_ROOT = SNR_DATA_ROOT / "browser-profiles"
 
 # Antrean: "browser" hanya diproses worker-browser; "analysis" dan default oleh worker-analysis.
 CELERY_TASK_DEFAULT_QUEUE = "analysis"
+
+# --- Autentikasi (FR-001, FR-006) ---
+LOGIN_URL = "accounts:login"
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "accounts:login"
+
+AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+
+# Pembatasan percobaan login (PRD bagian 13). Angka di bawah adalah nilai awal usulan,
+# BELUM disepakati dalam PRD; dapat diubah lewat environment variable.
+AXES_FAILURE_LIMIT = int(os.environ.get("AXES_FAILURE_LIMIT", "5"))
+AXES_COOLOFF_TIME = timedelta(minutes=int(os.environ.get("AXES_COOLOFF_MINUTES", "15")))
+# Kunci per kombinasi IP + username: pihak lain tidak bisa mengunci akun dari IP berbeda.
+AXES_LOCKOUT_PARAMETERS = [["ip_address", "username"]]
+AXES_RESET_ON_SUCCESS = True

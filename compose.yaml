@@ -59,6 +59,7 @@ services:
       - "127.0.0.1:8000:8000"
     volumes:
       - ./backend:/app
+      - ./tests:/tests
       - ${SNR_HOST_DATA:-./snr-data}/evidence:/srv/snr/evidence
       - ${SNR_HOST_DATA:-./snr-data}/exports:/srv/snr/exports
     healthcheck:

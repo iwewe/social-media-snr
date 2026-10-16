@@ -22,8 +22,8 @@ typecheck: ## Type-check backend (mypy) dan frontend (tsc)
 > cd backend && DJANGO_SECRET_KEY=ci-only-not-a-secret uv run mypy .
 > cd frontend && npm run -s typecheck
 
-test: ## Jalankan test backend (pytest)
-> cd backend && uv run pytest -q
+test: ## Jalankan test backend (pytest) di container web terhadap PostgreSQL
+> docker compose run --rm -T web pytest -q
 
 fmt: ## Rapikan format kode
 > cd backend && uv run ruff check --fix . && uv run ruff format .

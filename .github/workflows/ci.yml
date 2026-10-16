@@ -11,6 +11,24 @@ permissions:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: snr
+          POSTGRES_USER: snr
+          POSTGRES_PASSWORD: ci-only-not-a-secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U snr -d snr"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DJANGO_SECRET_KEY: ci-only-not-a-secret
+      POSTGRES_HOST: localhost
+      POSTGRES_DB: snr
+      POSTGRES_USER: snr
+      POSTGRES_PASSWORD: ci-only-not-a-secret
     defaults:
       run:
         working-directory: backend
@@ -21,8 +39,7 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run mypy .
-        env:
-          DJANGO_SECRET_KEY: ci-only-not-a-secret
+      - run: uv run python manage.py makemigrations --check --dry-run
       - run: uv run pytest -q
 
   frontend:
