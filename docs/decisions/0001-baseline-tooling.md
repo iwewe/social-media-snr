@@ -27,6 +27,7 @@ Rencana implementasi WP-0.1 mengusulkan `uv`, `ruff`, `mypy`, dan `eslint`/`pret
 ## Alasan dan konsekuensi
 
 - Versi dikunci lewat lockfile sehingga lingkungan dapat direproduksi.
-- Belum ada pembuktian bahwa seluruh dependensi baseline (Playwright, Celery) berjalan baik pada
-  Python 3.13; itu diverifikasi pada WP-0.2 dan WP-1.8.
+- Terverifikasi pada WP-0.2 (2026-10-16): Celery 5 dan Playwright 1.64 (Chromium 156) berjalan di
+  Python 3.13.16 dalam container; worker menjalankan tugas uji pada antrean `browser` dan `analysis`.
+  Pengambilan data dari platform nyata belum diuji (WP-1.8 dan I3).
 - Jika `oxlint` terbukti kurang memadai, ganti ke ESLint dengan mencatat keputusan baru.

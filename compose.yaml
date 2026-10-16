@@ -1,0 +1,106 @@
+# Lingkungan pengembangan MVP SNR (modular monolith + worker terpisah).
+# Jalankan: make up   (membuat direktori data lalu docker compose up -d --build)
+
+x-backend-env: &backend-env
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?isi DJANGO_SECRET_KEY di .env}
+  DJANGO_DEBUG: ${DJANGO_DEBUG:-0}
+  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+  POSTGRES_DB: ${POSTGRES_DB:-snr}
+  POSTGRES_USER: ${POSTGRES_USER:-snr}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?isi POSTGRES_PASSWORD di .env}
+  POSTGRES_HOST: postgres
+  CELERY_BROKER_URL: redis://valkey:6379/0
+  SNR_DATA_ROOT: /srv/snr
+
+x-backend-base: &backend-base
+  user: "${SNR_UID:-1000}:${SNR_GID:-1000}"
+  environment: *backend-env
+  depends_on:
+    postgres:
+      condition: service_healthy
+    valkey:
+      condition: service_healthy
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: postgres:17
+    user: "${SNR_UID:-1000}:${SNR_GID:-1000}"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-snr}
+      POSTGRES_USER: ${POSTGRES_USER:-snr}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?isi POSTGRES_PASSWORD di .env}
+    volumes:
+      - ${SNR_HOST_DATA:-./snr-data}/data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  valkey:
+    image: valkey/valkey:8
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  web:
+    <<: *backend-base
+    build:
+      context: .
+      dockerfile: deployment/backend.Dockerfile
+      target: app
+    command: sh -c "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./backend:/app
+      - ${SNR_HOST_DATA:-./snr-data}/evidence:/srv/snr/evidence
+      - ${SNR_HOST_DATA:-./snr-data}/exports:/srv/snr/exports
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/admin/login/')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  worker-analysis:
+    <<: *backend-base
+    build:
+      context: .
+      dockerfile: deployment/backend.Dockerfile
+      target: app
+    command: celery -A config worker -Q analysis,celery -l info
+    volumes:
+      - ./backend:/app
+      - ${SNR_HOST_DATA:-./snr-data}/evidence:/srv/snr/evidence
+
+  # Hanya worker ini yang melihat browser-profiles (PRD bagian 10: sesi browser terpisah dari bukti).
+  worker-browser:
+    <<: *backend-base
+    build:
+      context: .
+      dockerfile: deployment/backend.Dockerfile
+      target: browser
+    command: celery -A config worker -Q browser -l info
+    volumes:
+      - ./backend:/app
+      - ${SNR_HOST_DATA:-./snr-data}/evidence:/srv/snr/evidence
+      - ${SNR_HOST_DATA:-./snr-data}/browser-profiles:/srv/snr/browser-profiles
+
+  frontend:
+    image: node:24
+    user: "${SNR_UID:-1000}:${SNR_GID:-1000}"
+    working_dir: /app
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0"
+    environment:
+      HOME: /tmp
+    ports:
+      - "127.0.0.1:5173:5173"
+    volumes:
+      - ./frontend:/app
+    restart: unless-stopped

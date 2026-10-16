@@ -1,3 +1,1 @@
-# deployment
-
-Placeholder. Docker Compose dan konfigurasi lingkungan MVP diisi pada WP-0.2.
+# deployment\n\nBerisi `backend.Dockerfile` (target `app` dan `browser`). Orkestrasi ada di `compose.yaml` pada root repo.\n

@@ -38,3 +38,4 @@ storage_state*.json
 .idea/
 .vscode/
 .DS_Store
+/snr-data/

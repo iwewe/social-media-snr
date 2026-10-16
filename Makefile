@@ -1,7 +1,7 @@
 # Perintah pengembangan SNR. Recipe memakai ">" sebagai prefix agar tidak bergantung pada tab.
 .RECIPEPREFIX = >
 .DEFAULT_GOAL := help
-.PHONY: help install lint typecheck test fmt ci backend-install frontend-install
+.PHONY: help install lint typecheck test fmt ci backend-install frontend-install init-data up down logs ps
 
 help: ## Tampilkan daftar perintah
 > @grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -31,3 +31,19 @@ fmt: ## Rapikan format kode
 
 ci: lint typecheck test ## Urutan yang sama dengan CI
 > cd frontend && npm run -s build
+
+init-data: ## Buat direktori data lokal (postgres, evidence, profil browser, backup, ekspor)
+> mkdir -p snr-data/data/postgres snr-data/evidence/captures snr-data/evidence/screenshots snr-data/evidence/manifests snr-data/exports snr-data/browser-profiles snr-data/backups
+> chmod 700 snr-data/browser-profiles snr-data/data/postgres
+
+up: init-data ## Jalankan seluruh lingkungan (butuh .env)
+> docker compose up -d --build
+
+down: ## Hentikan lingkungan (data tetap ada)
+> docker compose down
+
+logs: ## Ikuti log seluruh layanan
+> docker compose logs -f --tail=100
+
+ps: ## Status layanan
+> docker compose ps

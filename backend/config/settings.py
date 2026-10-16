@@ -114,3 +114,6 @@ CELERY_TIMEZONE = TIME_ZONE
 SNR_DATA_ROOT = Path(os.environ.get("SNR_DATA_ROOT", "/srv/snr"))
 SNR_EVIDENCE_ROOT = SNR_DATA_ROOT / "evidence"
 SNR_BROWSER_PROFILES_ROOT = SNR_DATA_ROOT / "browser-profiles"
+
+# Antrean: "browser" hanya diproses worker-browser; "analysis" dan default oleh worker-analysis.
+CELERY_TASK_DEFAULT_QUEUE = "analysis"

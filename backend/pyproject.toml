@@ -10,6 +10,7 @@ dependencies = [
 ]
 
 [dependency-groups]
+browser = ["playwright"]
 dev = [
     "ruff",
     "mypy",
