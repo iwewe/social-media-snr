@@ -155,3 +155,6 @@ REST_FRAMEWORK = {
 CSRF_TRUSTED_ORIGINS = [
     o for o in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if o
 ]
+
+# Batas ukuran satu artefak preservasi (byte). Nilai awal usulan; belum ada keputusan di PRD.
+SNR_ARTIFACT_MAX_BYTES = int(os.environ.get("SNR_ARTIFACT_MAX_BYTES", str(512 * 1024 * 1024)))

@@ -110,6 +110,9 @@ class InspectionRun(models.Model):
     # Status rekonsiliasi (WP-1.4): None = belum direkonsiliasi; selain itu state DONE/SKIPPED/
     # BLOCKED beserta alasan, hitungan, dan run pembanding.
     reconciliation = models.JSONField(null=True, blank=True)
+    # Status penyimpanan artefak (WP-1.5a): None = belum pernah; IN_PROGRESS = terputus bila tidak
+    # pernah selesai; FINISHED / FINISHED_WITH_PROBLEMS + ringkasan dan jalur manifest.
+    preservation = models.JSONField(null=True, blank=True)
 
     class Meta:
         ordering = ["target_id", "sequence"]

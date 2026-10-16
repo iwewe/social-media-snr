@@ -38,6 +38,10 @@ class OverwriteRefused(EvidenceStorageError):
     """Berkas dengan nama itu sudah ada; bukti tidak boleh ditimpa (FR-039)."""
 
 
+class ArtifactTooLarge(EvidenceStorageError):
+    """Isi melampaui batas ukuran yang diizinkan; penulisan dibatalkan tanpa meninggalkan berkas."""
+
+
 class PathNotAllowed(EvidenceStorageError):
     """Jalur tidak diizinkan (traversal, absolut, keluar akar, atau area sesi browser)."""
 
@@ -128,7 +132,9 @@ def _fsync_dir(directory: Path) -> None:
         os.close(fd)
 
 
-def write_new(relative_path: str, data: bytes | Iterable[bytes]) -> StoredFile:
+def write_new(
+    relative_path: str, data: bytes | Iterable[bytes], *, max_bytes: int | None = None
+) -> StoredFile:
     """Tulis berkas bukti baru. Raise OverwriteRefused bila nama sudah ada."""
     target = resolve_inside_evidence(relative_path)
     parent = target.parent
@@ -147,9 +153,11 @@ def write_new(relative_path: str, data: bytes | Iterable[bytes]) -> StoredFile:
     try:
         with os.fdopen(fd, "wb") as handle:
             for chunk in _as_chunks(data):
+                size += len(chunk)
+                if max_bytes is not None and size > max_bytes:
+                    raise ArtifactTooLarge(f"melampaui batas {max_bytes} byte")
                 handle.write(chunk)
                 digest.update(chunk)
-                size += len(chunk)
             handle.flush()
             os.fsync(handle.fileno())
         os.chmod(tmp, FILE_MODE)
