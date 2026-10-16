@@ -13,8 +13,10 @@ from django.urls import URLPattern, URLResolver, get_resolver
 LOGIN_URL = "/accounts/login/"
 ADMIN_LOGIN_URL = "/admin/login/"
 
-# Satu-satunya path yang boleh diakses anonim. Menambah entri di sini harus disengaja.
+# Path halaman yang boleh diakses anonim. Menambah entri di sini harus disengaja.
 PUBLIC_PATHS = {LOGIN_URL, ADMIN_LOGIN_URL}
+# Endpoint API publik (tidak mengembalikan data): cookie CSRF dan login.
+PUBLIC_API_PATHS = {"/api/auth/csrf/", "/api/auth/login/"}
 
 _CONVERTER_SAMPLES = {"int": "1", "str": "x", "slug": "x", "path": "x", "uuid": str(uuid.UUID(int=0))}
 _ROUTE_PARAM = re.compile(r"<(?:(?P<conv>\w+):)?\w+>")
@@ -58,12 +60,19 @@ def test_every_url_requires_login_except_whitelist(client: Client) -> None:
     # Pengaman: enumerasi tidak boleh diam-diam kosong.
     assert len(paths) >= 10, f"terlalu sedikit URL terenumerasi: {paths}"
     assert LOGIN_URL in paths
+    # Pengaman: enumerasi harus benar-benar mencakup endpoint API.
+    assert sum(p.startswith("/api/") for p in paths) >= 8, paths
 
     offenders = []
     for path in paths:
-        if path in PUBLIC_PATHS:
+        if path in PUBLIC_PATHS or path in PUBLIC_API_PATHS:
             continue
         response = client.get(path)
+        if path.startswith("/api/"):
+            # API menolak anonim dengan 401 JSON, bukan redirect HTML.
+            if response.status_code != 401 or "json" not in response.headers.get("Content-Type", ""):
+                offenders.append((path, response.status_code, response.headers.get("Content-Type")))
+            continue
         location = response.headers.get("Location", "")
         redirected_to_login = response.status_code == 302 and (
             location.startswith(LOGIN_URL) or location.startswith(ADMIN_LOGIN_URL)

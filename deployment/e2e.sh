@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# E2E browser untuk workspace (WP-0.5). Memakai DATABASE TERPISAH (snr_e2e) dan container
+# sementara, sehingga data uji tidak mengotori database dev (versi konteks append-only,
+# tidak bisa dihapus). Semua dibersihkan saat selesai. Prasyarat: `make up` (stack dev hidup).
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+DB=snr_e2e
+WEB=snr-e2e-web
+FRONT=snr-e2e-front
+SHOTS="$PWD/e2e-shots"
+PASSWORD="$(openssl rand -base64 18 | tr -d '/+=')"
+E2E_USER=e2e_user
+
+set -a
+# shellcheck disable=SC1091
+. ./.env
+set +a
+
+cleanup() {
+  docker rm -f "$WEB" "$FRONT" >/dev/null 2>&1 || true
+  docker compose exec -T postgres psql -U "$POSTGRES_USER" -d postgres \
+    -c "DROP DATABASE IF EXISTS $DB WITH (FORCE)" >/dev/null 2>&1 || true
+  echo "dibersihkan: container sementara dan database $DB"
+}
+trap cleanup EXIT
+
+mkdir -p "$SHOTS"
+cleanup >/dev/null
+
+echo "== menyiapkan database $DB"
+docker compose exec -T postgres psql -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE $DB" >/dev/null
+docker compose run --rm --no-deps -e POSTGRES_DB=$DB web python manage.py migrate --noinput >/dev/null
+docker compose run --rm --no-deps -e POSTGRES_DB=$DB -e E2E_PW="$PASSWORD" web python manage.py shell -c \
+  "import os; from django.contrib.auth.models import User; User.objects.create_user('$E2E_USER', password=os.environ['E2E_PW'])"
+
+echo "== menjalankan backend dan frontend sementara"
+docker compose run -d --no-deps --name "$WEB" -e POSTGRES_DB=$DB \
+  -e DJANGO_ALLOWED_HOSTS="$FRONT,localhost" \
+  web python manage.py runserver 0.0.0.0:8001 >/dev/null
+docker compose run -d --no-deps --name "$FRONT" \
+  -e VITE_API_PROXY="http://$WEB:8001" -e VITE_ALLOWED_HOSTS="$FRONT" \
+  frontend npm run dev -- --host 0.0.0.0 --port 5174 >/dev/null
+
+echo "== menunggu frontend siap"
+for _ in $(seq 1 60); do
+  if docker compose run --rm --no-deps web python -c \
+    "import urllib.request as u; u.urlopen('http://$FRONT:5174/')" >/dev/null 2>&1; then
+    break
+  fi
+  sleep 2
+done
+
+echo "== menjalankan skenario browser"
+docker compose run --rm --no-deps \
+  -v "$PWD/tests/e2e:/e2e:ro" -v "$SHOTS:/shots" \
+  -e E2E_BASE_URL="http://$FRONT:5174" -e E2E_USER="$E2E_USER" -e E2E_PASSWORD="$PASSWORD" \
+  -e E2E_SHOTS=/shots \
+  worker-browser python /e2e/workspace_flow.py

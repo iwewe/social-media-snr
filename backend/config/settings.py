@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "axes",
+    "rest_framework",
     # Aplikasi SNR. App reporting sengaja belum ada: desain laporan ditunda (FR-096).
     "accounts",
     "investigations",
@@ -140,3 +141,17 @@ AXES_COOLOFF_TIME = timedelta(minutes=int(os.environ.get("AXES_COOLOFF_MINUTES",
 # Kunci per kombinasi IP + username: pihak lain tidak bisa mengunci akun dari IP berbeda.
 AXES_LOCKOUT_PARAMETERS = [["ip_address", "username"]]
 AXES_RESET_ON_SUCCESS = True
+AXES_LOCKOUT_CALLABLE = "api.lockout.lockout_response"
+
+# --- API untuk frontend (WP-0.5) ---
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": ["api.auth.SessionAuth401"],
+    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser"],
+    "EXCEPTION_HANDLER": "api.errors.api_exception_handler",
+}
+# Origin tepercaya tambahan untuk CSRF (mis. frontend dev di port lain), dipisah koma.
+CSRF_TRUSTED_ORIGINS = [
+    o for o in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if o
+]

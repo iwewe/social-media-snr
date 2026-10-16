@@ -39,3 +39,4 @@ storage_state*.json
 .vscode/
 .DS_Store
 /snr-data/
+/e2e-shots/
