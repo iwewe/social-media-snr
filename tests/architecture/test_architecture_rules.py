@@ -82,3 +82,11 @@ def test_storage_roots_are_only_touched_by_the_storage_layer(setting: str) -> No
 def test_platform_list_matches_the_adapter_packages(modules: set[str]) -> None:
     adapters = {m.split(".")[2] for m in modules if m.startswith("collection.adapters.")}
     assert adapters == set(PLATFORMS)
+
+
+def test_unchecked_policy_is_never_used_by_production_code() -> None:
+    """UncheckedPolicy menerima semua artefak (termasuk rahasia); hanya modul kebijakan yang boleh
+    mendefinisikannya. Kode produksi lain tidak boleh merujuknya (WP-1.5)."""
+    users = {mod for mod, _line in find_identifier_usage(BACKEND, "UncheckedPolicy")}
+    assert users, "UncheckedPolicy tidak ditemukan (pemeriksa tak efektif?)"
+    assert users <= {"preservation.policy"}, users - {"preservation.policy"}

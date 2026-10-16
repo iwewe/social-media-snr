@@ -23,7 +23,7 @@ Ingestion tidak mengubah status run; itu tanggung jawab orchestrator (WP-1.6).
 
 import logging
 from collections import Counter
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
@@ -82,6 +82,7 @@ class IngestionReport:
     observed_reply_count: int = 0
     failed_batches: list[BatchFailure] = field(default_factory=list)
     problems: list[Problem] = field(default_factory=list)
+    artifacts: dict[str, Any] | None = None  # ringkasan penyimpanan artefak, bila ada sink
 
     @property
     def ok(self) -> bool:
@@ -452,6 +453,38 @@ def _write_ingestion_state(run: InspectionRun, state: dict[str, Any]) -> None:
     InspectionRun.objects.filter(pk=run.pk).update(ingestion=state)
 
 
+def _handle_artifacts(
+    run: InspectionRun,
+    result: InspectionResult,
+    report: IngestionReport,
+    sink: Callable[[InspectionRun, InspectionResult], Any] | None,
+) -> None:
+    """Artefak tidak dibuang diam-diam: disimpan lewat `sink` bila ada, bila tidak ditandai."""
+    if sink is None:
+        if result.artifacts:
+            report.problems.append(
+                Problem(
+                    "ARTIFACTS_NOT_PERSISTED",
+                    f"{len(result.artifacts)} artefak belum disimpan (tidak ada artifact_sink).",
+                )
+            )
+        return
+    try:
+        outcome = sink(run, result)
+    except Exception as exc:  # noqa: BLE001 - kegagalan artefak tidak boleh menjatuhkan ingestion
+        logger.exception("Penyimpanan artefak gagal pada run %s", run.pk)
+        report.problems.append(Problem("ARTIFACT_PERSISTENCE_FAILED", type(exc).__name__))
+        return
+    report.artifacts = outcome.to_dict() if hasattr(outcome, "to_dict") else None
+    if not getattr(outcome, "ok", True):
+        report.problems.append(
+            Problem(
+                "ARTIFACT_PERSISTENCE_PROBLEMS",
+                "ada artefak yang gagal atau konflik; lihat laporan",
+            )
+        )
+
+
 # --- pintu masuk ------------------------------------------------------------------------------
 
 
@@ -461,6 +494,7 @@ def ingest_result(
     *,
     batch_size: int = DEFAULT_BATCH_SIZE,
     max_failed_batches: int = MAX_FAILED_BATCHES,
+    artifact_sink: Callable[[InspectionRun, InspectionResult], Any] | None = None,
 ) -> IngestionReport:
     """Masukkan hasil inspeksi ke database. Lihat docstring modul untuk jaminannya."""
     if batch_size <= 0 or max_failed_batches <= 0:
@@ -480,15 +514,6 @@ def ingest_result(
         platform_displayed_count=result.coverage.platform_displayed_count,
         observed_reply_count=result.observed_reply_count,
     )
-    if result.artifacts:
-        # Jangan dibuang diam-diam: penyimpanan artefak ada pada WP-1.5.
-        report.problems.append(
-            Problem(
-                "ARTIFACTS_NOT_PERSISTED",
-                f"{len(result.artifacts)} artefak belum disimpan (preservasi artefak: WP-1.5).",
-            )
-        )
-
     _store_run_metadata(run, result, report)
     # Penanda "sedang berjalan": bila proses mati sebelum selesai, nilai ini tetap tinggal dan
     # run dapat dikenali sebagai ingestion yang terputus (orchestrator menandainya, WP-1.6).
@@ -537,6 +562,7 @@ def ingest_result(
                 )
                 break
 
+    _handle_artifacts(run, result, report, artifact_sink)
     _write_ingestion_state(
         run,
         {

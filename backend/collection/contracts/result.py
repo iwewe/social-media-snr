@@ -9,7 +9,7 @@ Invarian utama yang ditegakkan saat objek dibangun (bukan oleh konvensi):
 - Observasi tidak boleh dari platform atau run lain (FR-024, NFR-06).
 """
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 
 from investigations.enums import Platform, TargetType
@@ -98,14 +98,20 @@ class Coverage:
 
 @dataclass(frozen=True)
 class ArtifactCapture:
-    """Artefak mentah dari adapter (screenshot, DOM, dst.). Disimpan orchestrator lewat
-    preservation.storage (WP-1.5); adapter tidak menulis ke disk sendiri."""
+    """Artefak mentah dari adapter (screenshot, DOM, dst.). Disimpan lewat preservation.storage
+    (WP-1.5); adapter tidak menulis ke disk sendiri.
+
+    Isi diberikan sebagai `content` (bytes) ATAU `chunks` (pabrik yang menghasilkan iterable bytes
+    baru pada tiap panggilan, untuk berkas besar). Pabrik dipanggil ulang saat ingestion
+    diulang, jadi harus dapat menghasilkan isi yang sama lagi.
+    """
 
     kind: ArtifactKind
     filename: str
-    content: bytes
+    content: bytes | None
     content_type: str
     note: str | None = None
+    chunks: Callable[[], Iterable[bytes]] | None = None
 
     def __post_init__(self) -> None:
         name = self.filename
@@ -113,6 +119,17 @@ class ArtifactCapture:
             raise ContractViolation("filename artefak harus nama berkas sederhana tanpa direktori.")
         if not self.content_type.strip():
             raise ContractViolation("content_type artefak wajib diisi.")
+        if self.kind is ArtifactKind.MANIFEST:
+            raise ContractViolation("Adapter tidak boleh menghasilkan artefak jenis manifest.")
+        if (self.content is None) == (self.chunks is None):
+            raise ContractViolation("Artefak harus memiliki tepat satu dari content atau chunks.")
+
+    def iter_chunks(self) -> Iterable[bytes]:
+        """Isi sebagai aliran bytes; dapat dipanggil berulang."""
+        if self.content is not None:
+            return [self.content] if self.content else []
+        assert self.chunks is not None
+        return self.chunks()
 
 
 @dataclass(frozen=True)

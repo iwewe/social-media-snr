@@ -104,3 +104,5 @@ class ArtifactKind(StrEnum):
     RAW_RESPONSE = "raw_response"
     MEDIA = "media"
     OTHER = "other"
+    # Hanya dibuat oleh SNR (preservation.manifest). Adapter tidak boleh menghasilkannya.
+    MANIFEST = "manifest"
