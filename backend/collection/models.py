@@ -104,6 +104,9 @@ class InspectionRun(models.Model):
     collector_version = models.CharField(max_length=50, blank=True, default="")
     coverage = models.JSONField(null=True, blank=True)
     limitations = models.JSONField(default=list, blank=True)
+    # Status ingestion (WP-1.3): None = belum pernah di-ingest; IN_PROGRESS = proses terputus bila
+    # tidak pernah selesai; FINISHED / FINISHED_WITH_PROBLEMS + ringkasan laporan.
+    ingestion = models.JSONField(null=True, blank=True)
 
     class Meta:
         ordering = ["target_id", "sequence"]
