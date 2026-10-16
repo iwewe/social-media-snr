@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Masuk - SNR</title>
+  </head>
+  <body>
+    <main>
+      <h1>Masuk ke SNR</h1>
+      {% if form.errors %}
+        <p role="alert">Nama pengguna atau kata sandi tidak sesuai.</p>
+      {% endif %}
+      <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <input type="hidden" name="next" value="{{ next }}" />
+        <button type="submit">Masuk</button>
+      </form>
+    </main>
+  </body>
+</html>

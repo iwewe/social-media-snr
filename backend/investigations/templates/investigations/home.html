@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SNR</title>
+  </head>
+  <body>
+    <main>
+      <h1>Workspace SNR</h1>
+      <p>Masuk sebagai {{ user.get_username }}.</p>
+      <form method="post" action="{% url 'accounts:logout' %}">
+        {% csrf_token %}
+        <button type="submit">Keluar</button>
+      </form>
+    </main>
+  </body>
+</html>

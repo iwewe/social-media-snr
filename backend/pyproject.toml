@@ -1,0 +1,56 @@
+[project]
+name = "snr-backend"
+version = "0.0.1"
+description = "SNR - backend (modular monolith)"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "django>=5.2,<6",
+    "psycopg[binary]>=3.2",
+    "celery[redis]>=5.4",
+    "django-axes>=8",
+]
+
+[dependency-groups]
+browser = ["playwright"]
+dev = [
+    "ruff",
+    "mypy",
+    "django-stubs[compatible-mypy]",
+    "celery-types",
+    "pytest",
+    "pytest-django",
+    "pytest-env",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+extend-exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "DJ", "S"]
+ignore = ["S101"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S105", "S106"]
+
+[tool.mypy]
+python_version = "3.13"
+plugins = ["mypy_django_plugin.main"]
+strict_optional = true
+warn_unused_ignores = true
+check_untyped_defs = true
+exclude = ["migrations/"]
+
+[tool.django-stubs]
+django_settings_module = "config.settings"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+pythonpath = ["."]
+testpaths = ["../tests"]
+env = ["DJANGO_SECRET_KEY=test-only-not-a-secret"]
+
+[[tool.mypy.overrides]]
+module = ["axes.*"]
+ignore_missing_imports = true
