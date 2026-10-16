@@ -37,7 +37,7 @@ from collection.models import InspectionRun
 
 from . import manifest as manifest_module
 from .models import EvidenceArtifact
-from .policy import ArtifactPolicy
+from .policy import ArtifactPolicy, PolicyDecision
 from .storage import (
     EvidenceStorageError,
     OverwriteRefused,
@@ -244,7 +244,13 @@ def persist_run_artifacts(
         _set_state(run, {"state": "IN_PROGRESS", "started_at": timezone.now().isoformat()})
 
         for capture in result.artifacts:
-            decision = policy.check(capture)
+            try:
+                decision = policy.check(capture)
+            except Exception:  # noqa: BLE001 - GAGAL TERTUTUP: kebijakan yang rusak = artefak ditolak
+                logger.exception("Kebijakan gagal memeriksa artefak pada run %s", run.pk)
+                decision = PolicyDecision(
+                    False, "policy-error", "kebijakan gagal dijalankan sehingga artefak ditolak"
+                )
             if not decision.allowed:
                 report.rejected.append(
                     {
@@ -324,11 +330,18 @@ def persist_run_artifacts(
             )
 
 
-def make_artifact_sink(policy: ArtifactPolicy, max_bytes: int | None = None):
-    """Pabrik `artifact_sink` untuk `collection.ingestion.ingest_result` (tanpa impor terbalik)."""
+def make_artifact_sink(policy: ArtifactPolicy | None = None, max_bytes: int | None = None):
+    """Pabrik `artifact_sink` untuk `collection.ingestion.ingest_result` (tanpa impor terbalik).
+
+    Tanpa `policy`, dipakai penyaring rahasia produksi (`SecretFilterPolicy`)."""
+    if policy is None:
+        from .secret_filter import SecretFilterPolicy
+
+        policy = SecretFilterPolicy()
+    chosen = policy
 
     def sink(run: InspectionRun, result: InspectionResult) -> ArtifactReport:
-        return persist_run_artifacts(run, result, policy=policy, max_bytes=max_bytes)
+        return persist_run_artifacts(run, result, policy=chosen, max_bytes=max_bytes)
 
     return sink
 
