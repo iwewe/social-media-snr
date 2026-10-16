@@ -638,3 +638,31 @@ def test_reingest_after_interruption_finishes_and_clears_the_marker(monkeypatch,
     assert ingest_result(run1, result).ok
     run1.refresh_from_db()
     assert run1.ingestion["state"] == "FINISHED"
+
+
+# --- WP-1.4: hash isi dan pernyataan ketidaktersediaan ----------------------------------------
+
+
+def test_every_observation_row_stores_a_versioned_content_hash(run1) -> None:
+    from collection.content import CONTENT_HASH_VERSION
+
+    ingest_result(run1, make_result(run1, [obs(run1, "r1"), obs(run1, "r2", text=None)], displayed=2))
+    for row in PostObservation.objects.all():
+        assert len(row.content_hash) == 64 and row.content_hash_version == CONTENT_HASH_VERSION
+
+
+def test_confirmed_unavailable_statements_are_persisted_on_the_run(run1) -> None:
+    from collection.contracts import UnavailableObject
+
+    result = InspectionResult(
+        platform=Platform.X, inspection_run_id=run1.run_id, outcome=O.COMPLETED,
+        collector=CollectorInfo("uji", "0.1"),
+        coverage=Coverage((Capability.INSPECT_REPLIES,), True, 1),
+        observations=(obs(run1, "r1"),),
+        confirmed_unavailable=(UnavailableObject("r9", "komentar dihapus"),),
+    )
+    assert ingest_result(run1, result).ok
+    run1.refresh_from_db()
+    assert run1.coverage["confirmed_unavailable"] == [
+        {"external_post_id": "r9", "evidence": "komentar dihapus"}
+    ]

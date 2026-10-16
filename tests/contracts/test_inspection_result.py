@@ -23,6 +23,7 @@ from collection.contracts import (
     SourceMethod,
     SourceObjectType,
     TargetUrlInfo,
+    UnavailableObject,
 )
 from investigations.enums import Platform, TargetType
 
@@ -324,3 +325,42 @@ def test_declarations_are_read_only() -> None:
         caps.declarations[Capability.INSPECT_POST] = CapabilityDeclaration(  # type: ignore[index]
             CapabilityStatus.UNSUPPORTED, "x"
         )
+
+
+# --- confirmed_unavailable (WP-1.4) ---------------------------------------------------------
+
+
+def test_confirmed_unavailable_is_allowed_on_a_complete_result() -> None:
+    r = result(
+        O.COMPLETED, [obs("p1")], coverage=cov(True, 1),
+        confirmed_unavailable=(UnavailableObject("p9", "halaman objek: komentar dihapus"),),
+    )
+    assert r.confirmed_unavailable[0].external_post_id == "p9"
+
+
+@pytest.mark.parametrize("outcome", [O.PARTIAL, O.FAILED, O.ACCESS_RESTRICTED, O.UNSUPPORTED])
+def test_confirmed_unavailable_is_rejected_unless_the_result_is_completed(outcome) -> None:
+    code = {O.PARTIAL: L.PAGINATION_INCOMPLETE, O.FAILED: L.PARSE_FAILED,
+            O.ACCESS_RESTRICTED: L.ACCESS_RESTRICTED, O.UNSUPPORTED: L.UNSUPPORTED}[outcome]
+    observations = [obs("p1", PARTIAL_STATUS)] if outcome is O.PARTIAL else []
+    with pytest.raises(ContractViolation, match="hanya boleh pada hasil COMPLETED"):
+        result(outcome, observations, [lim(code)], cov(False if outcome is O.PARTIAL else None),
+               confirmed_unavailable=(UnavailableObject("p9", "bukti"),))
+
+
+def test_object_cannot_be_both_observed_and_unavailable() -> None:
+    with pytest.raises(ContractViolation, match="sekaligus teramati"):
+        result(O.COMPLETED, [obs("p1")], coverage=cov(True, 1),
+               confirmed_unavailable=(UnavailableObject("p1", "bukti"),))
+
+
+def test_duplicate_unavailable_ids_are_rejected() -> None:
+    dup = (UnavailableObject("p9", "a"), UnavailableObject("p9", "b"))
+    with pytest.raises(ContractViolation, match="ganda"):
+        result(O.COMPLETED, [obs("p1")], coverage=cov(True, 1), confirmed_unavailable=dup)
+
+
+@pytest.mark.parametrize(("post_id", "evidence"), [("", "x"), (" p9", "x"), ("p9", ""), ("p9", "  ")])
+def test_unavailable_object_needs_an_id_and_evidence(post_id, evidence) -> None:
+    with pytest.raises(ContractViolation):
+        UnavailableObject(post_id, evidence)

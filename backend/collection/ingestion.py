@@ -30,6 +30,7 @@ from typing import Any
 from django.db import transaction
 from django.utils import timezone
 
+from .content import CONTENT_HASH_VERSION, observation_content_hash
 from .contracts import InspectionResult, Observation
 from .models import (
     ActorAccount,
@@ -205,9 +206,20 @@ def _ingest_batch(
     report.actors_created += actors_created
 
     # Kandidat tanpa ID: cocokkan multiset terhadap yang sudah ada pada run INI saja.
+    # Dua langkah (bukan JOIN) agar rencana query tidak bergantung pada statistik tabel:
+    # kandidat run ini lewat indeks parsial, lalu observasinya lewat indeks unik (post, run).
+    candidate_ids = list(
+        Post.objects.filter(external_post_id__isnull=True, first_seen_run=run).values_list(
+            "pk", flat=True
+        )
+    )
     existing_candidates: Counter[tuple[Any, ...]] = Counter(
         _candidate_fingerprint(o)
-        for o in PostObservation.objects.filter(run=run, post__external_post_id__isnull=True)
+        for o in (
+            PostObservation.objects.filter(run=run, post_id__in=candidate_ids)
+            if candidate_ids
+            else []
+        )
     )
 
     existing_by_post = {
@@ -287,6 +299,8 @@ def _to_row(
         actor_display_name=o.actor_display_name,
         parent_unknown=o.parent_unknown,
         identity_needs_verification=o.identity_needs_verification,
+        content_hash=observation_content_hash(o),
+        content_hash_version=CONTENT_HASH_VERSION,
     )
 
 
@@ -377,6 +391,11 @@ def _store_run_metadata(
         "observed_object_count": len(result.observations),
         "notes": list(result.coverage.notes),
         "outcome": result.outcome.value,
+        # Pernyataan eksplisit adapter (bahan CONFIRMED_UNAVAILABLE pada rekonsiliasi, WP-1.4).
+        "confirmed_unavailable": [
+            {"external_post_id": c.external_post_id, "evidence": c.evidence}
+            for c in result.confirmed_unavailable
+        ],
     }
     limitations = [
         {

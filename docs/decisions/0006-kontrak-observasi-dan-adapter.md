@@ -44,3 +44,9 @@ lima platform), jadi bentuknya sulit diubah setelah banyak adapter bergantung pa
   menentukan kekuatan pengujiannya. Belum ada adapter nyata (WP-1.7, WP-1.8, I3).
 - Pemetaan `InspectionOutcome` ke status `InspectionRun` dan penanganan `REVIEW_REQUIRED` ada di
   WP-1.6.
+
+## Addendum (WP-1.4)
+
+`InspectionResult` kini punya `confirmed_unavailable` (pernyataan eksplisit adapter bahwa objek tidak
+tersedia, lengkap dengan bukti). Hanya sah pada hasil `COMPLETED`, dan objek tidak boleh sekaligus teramati.
+Lihat ADR 0009.
