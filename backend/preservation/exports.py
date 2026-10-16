@@ -7,6 +7,7 @@ investigasi. Kode apa pun yang membentuk ekspor atau arsip dari berkas lokal waj
 
 from pathlib import Path
 
+from .secret_filter import filename_finding
 from .storage import PathNotAllowed, _is_within, browser_profiles_root, evidence_root
 
 
@@ -17,4 +18,7 @@ def ensure_exportable(path: str | Path) -> Path:
         raise PathNotAllowed("Sesi browser tidak boleh diekspor atau diarsipkan.")
     if not _is_within(resolved, evidence_root().resolve()) or resolved == evidence_root().resolve():
         raise PathNotAllowed("Hanya berkas di dalam akar evidence yang dapat diekspor.")
+    finding = filename_finding(resolved.name)
+    if finding is not None:
+        raise PathNotAllowed(f"Berkas menyerupai rahasia tidak boleh diekspor ({finding.rule}).")
     return resolved
