@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+backend/staticfiles/
+
+# Node
+node_modules/
+dist/
+
+# Rahasia dan konfigurasi lokal (PRD bagian 13: cookies/session adalah kredensial rahasia)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+cookies*.txt
+cookies*.json
+storage_state*.json
+*.har
+
+# Data runtime lokal: evidence, profil browser, backup, ekspor TIDAK PERNAH masuk Git
+/data/
+/evidence/
+/browser-profiles/
+/backups/
+/exports/
+*.dump
+*.sql
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
