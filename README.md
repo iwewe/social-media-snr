@@ -36,4 +36,4 @@ untuk dev lokal). Jangan pernah meng-commit `.env`, cookies, atau profil browser
 
 ## Status
 
-I0 (Repository Bootstrap) sedang dikerjakan: WP-0.1 sampai WP-0.5 selesai. Lihat rencana untuk paket kerja berikutnya.
+I0 (Repository Bootstrap) selesai (WP-0.1 sampai WP-0.6). Berikutnya I1: inspeksi, preservasi, dan reinspection; lihat `rencana-implementasi-snr.md`.

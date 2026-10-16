@@ -22,6 +22,8 @@ dev = [
     "pytest-django",
     "pytest-env",
     "djangorestframework-stubs>=3.18.1",
+    "pyyaml>=6.0.3",
+    "types-pyyaml>=6.0.12.20260906",
 ]
 
 [tool.ruff]
