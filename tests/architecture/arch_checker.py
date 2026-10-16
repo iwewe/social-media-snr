@@ -67,6 +67,18 @@ def default_import_rules() -> list[ImportRule]:
             ("intelligence",),
         ),
         ImportRule(
+            "kontrak observasi tidak bergantung pada implementasinya (adapter, orchestrator, "
+            "rekonsiliasi, analisis, preservasi)",
+            ("collection.contracts",),
+            (
+                "collection.adapters",
+                "collection.orchestrator",
+                "collection.reconciliation",
+                "intelligence",
+                "preservation",
+            ),
+        ),
+        ImportRule(
             "intelligence tidak mengambil data (FR-041)",
             ("intelligence",),
             ("playwright", "collection.adapters", "collection.orchestrator"),
