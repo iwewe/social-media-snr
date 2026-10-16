@@ -8,6 +8,7 @@ dependencies = [
     "psycopg[binary]>=3.2",
     "celery[redis]>=5.4",
     "django-axes>=8",
+    "djangorestframework>=3.18.3",
 ]
 
 [dependency-groups]
@@ -20,6 +21,7 @@ dev = [
     "pytest",
     "pytest-django",
     "pytest-env",
+    "djangorestframework-stubs>=3.18.1",
 ]
 
 [tool.ruff]

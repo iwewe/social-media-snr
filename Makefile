@@ -1,7 +1,7 @@
 # Perintah pengembangan SNR. Recipe memakai ">" sebagai prefix agar tidak bergantung pada tab.
 .RECIPEPREFIX = >
 .DEFAULT_GOAL := help
-.PHONY: help install lint typecheck test fmt ci backend-install frontend-install init-data up down logs ps
+.PHONY: help install lint typecheck test fmt ci backend-install frontend-install init-data up down logs ps e2e
 
 help: ## Tampilkan daftar perintah
 > @grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -22,8 +22,9 @@ typecheck: ## Type-check backend (mypy) dan frontend (tsc)
 > cd backend && DJANGO_SECRET_KEY=ci-only-not-a-secret uv run mypy .
 > cd frontend && npm run -s typecheck
 
-test: ## Jalankan test backend (pytest) di container web terhadap PostgreSQL
+test: ## Test backend (pytest, di container web terhadap PostgreSQL) dan frontend (vitest)
 > docker compose run --rm -T web pytest -q
+> cd frontend && npm run -s test
 
 fmt: ## Rapikan format kode
 > cd backend && uv run ruff check --fix . && uv run ruff format .
@@ -47,3 +48,6 @@ logs: ## Ikuti log seluruh layanan
 
 ps: ## Status layanan
 > docker compose ps
+
+e2e: ## E2E browser (Playwright) pada database terpisah; butuh stack hidup (make up)
+> bash deployment/e2e.sh

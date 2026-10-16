@@ -19,7 +19,13 @@ make ci          lint, typecheck, test, build (sama dengan CI)
 make up          jalankan lingkungan Docker (butuh .env; salin dari .env.example)
 make down        hentikan lingkungan (data di snr-data/ tetap ada)
 make ps / logs   status dan log layanan
+make test        test backend (di container, PostgreSQL) dan frontend (vitest)
+make e2e         E2E browser pada database terpisah (butuh stack hidup)
 ```
+
+Setelah `make up`, antarmuka ada di `http://127.0.0.1:5173` (proxy ke API Django). Pada server jarak
+jauh, buka lewat SSH tunnel: `ssh -L 5173:127.0.0.1:5173 <user>@<host>`. Buat akun dengan
+`docker compose exec web python manage.py createsuperuser`.
 
 Layanan Compose: `postgres`, `valkey`, `web` (127.0.0.1:8000), `worker-analysis`, `worker-browser`,
 `frontend` (127.0.0.1:5173). Hanya `worker-browser` yang memasang `browser-profiles/`; web dan
@@ -30,4 +36,4 @@ untuk dev lokal). Jangan pernah meng-commit `.env`, cookies, atau profil browser
 
 ## Status
 
-I0 (Repository Bootstrap) sedang dikerjakan: WP-0.1 dan WP-0.2 selesai. Lihat rencana untuk paket kerja berikutnya.
+I0 (Repository Bootstrap) sedang dikerjakan: WP-0.1 sampai WP-0.5 selesai. Lihat rencana untuk paket kerja berikutnya.
