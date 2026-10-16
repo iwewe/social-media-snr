@@ -28,6 +28,6 @@ class IdentityAdmin(ReadOnlyAdmin):
     list_filter = ("platform", "identity_status")
 
 
-@admin.register(models.PostObservation, models.PostRelation)
+@admin.register(models.PostObservation, models.PostRelation, models.ObservationReconciliation)
 class ObservationAdmin(ReadOnlyAdmin):
     list_display = ("__str__", "run")

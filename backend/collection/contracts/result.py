@@ -116,6 +116,27 @@ class ArtifactCapture:
 
 
 @dataclass(frozen=True)
+class UnavailableObject:
+    """Pernyataan EKSPLISIT adapter bahwa sebuah objek tidak tersedia (mis. halaman objeknya
+    mengembalikan 'dihapus'/404). Bukan hasil dari absennya objek pada sebuah daftar: itu hanya
+    NOT_OBSERVED (PRD bagian 9.2). `evidence` menjelaskan apa yang diamati."""
+
+    external_post_id: str
+    evidence: str
+
+    def __post_init__(self) -> None:
+        if (
+            not self.external_post_id.strip()
+            or self.external_post_id != self.external_post_id.strip()
+        ):
+            raise ContractViolation(
+                "external_post_id objek tidak tersedia harus string tidak kosong."
+            )
+        if not self.evidence.strip():
+            raise ContractViolation("evidence ketidaktersediaan wajib diisi.")
+
+
+@dataclass(frozen=True)
 class InspectionResult:
     platform: Platform
     inspection_run_id: str
@@ -125,9 +146,12 @@ class InspectionResult:
     observations: tuple[Observation, ...] = ()
     limitations: tuple[Limitation, ...] = ()
     artifacts: tuple[ArtifactCapture, ...] = field(default=())
+    # Hanya untuk hasil COMPLETED: objek yang adapter nyatakan tidak tersedia secara eksplisit.
+    confirmed_unavailable: tuple[UnavailableObject, ...] = field(default=())
 
     def __post_init__(self) -> None:
         set_ = object.__setattr__
+        set_(self, "confirmed_unavailable", _tuple(self.confirmed_unavailable))
         set_(self, "observations", _tuple(self.observations))
         set_(self, "limitations", _tuple(self.limitations))
         set_(self, "artifacts", _tuple(self.artifacts))
@@ -163,6 +187,20 @@ class InspectionResult:
                         "Adapter harus menyatukan objek yang sama dalam satu inspeksi."
                     )
                 seen.add(obs.external_post_id)
+
+        if self.confirmed_unavailable:
+            if self.outcome is not InspectionOutcome.COMPLETED:
+                raise ContractViolation(
+                    "confirmed_unavailable hanya boleh pada hasil COMPLETED: ketidaktersediaan "
+                    "memerlukan cakupan yang lengkap (PRD bagian 9.2)."
+                )
+            ids = [u.external_post_id for u in self.confirmed_unavailable]
+            if len(set(ids)) != len(ids):
+                raise ContractViolation("confirmed_unavailable memuat external_post_id ganda.")
+            if set(ids) & seen:
+                raise ContractViolation(
+                    "Objek tidak boleh sekaligus teramati dan dinyatakan tidak tersedia."
+                )
 
         names = [a.filename for a in self.artifacts]
         if len(set(names)) != len(names):

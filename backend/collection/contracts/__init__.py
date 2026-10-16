@@ -20,6 +20,7 @@ from .result import (
     InspectionRequest,
     InspectionResult,
     Limitation,
+    UnavailableObject,
 )
 from .target import TargetUrlInfo
 
@@ -44,4 +45,5 @@ __all__ = [
     "SourceMethod",
     "SourceObjectType",
     "TargetUrlInfo",
+    "UnavailableObject",
 ]

@@ -108,3 +108,61 @@ for n, batch in [(1000, 500), (5000, 500), (5000, 1000), (10000, 1000)]:
         seconds, queries = measure(n, batch, enabled)
         label = "aktif" if enabled else "mati"
         print(f"{n:>6} {batch:>6} {label:>8} {seconds:>8.2f} {seconds / n * 1000:>8.2f} {queries:>7}", flush=True)
+
+
+# --- rekonsiliasi (WP-1.4) ---------------------------------------------------------------------
+from collection.reconciliation import reconcile_run  # noqa: E402
+
+
+def measure_reconcile(n):
+    """Run 2 memuat semua objek run 1 (1% diedit) ditambah 10% objek baru; 5% objek run 1 hilang."""
+    try:
+        with transaction.atomic():
+            user = User.objects.create_user(f"bench-{uuid.uuid4().hex[:8]}", password="x")
+            inv = inv_services.create_investigation(user=user, name="bench-recon")
+            target = inv_services.register_target(
+                investigation=inv, user=user, platform=Platform.X,
+                target_type=TargetType.POST, url="https://x.com/bench/status/2",
+            )
+            run1 = services.create_inspection_run(
+                target=target, user=user, requested=[Capability.INSPECT_REPLIES]
+            )
+            assert ingest_result(run1, _build(run1, n), batch_size=1000).ok
+            run2 = services.create_inspection_run(
+                target=target, user=user, requested=[Capability.INSPECT_REPLIES]
+            )
+            second = _build(run2, n)
+            keep = n - n // 20  # 5% hilang
+            edited = set(range(0, n, 100))  # 1% diedit
+            observations = [
+                Observation(**{**o.__dict__, "text": o.text + " (diedit)"})
+                if i in edited else o
+                for i, o in enumerate(second.observations[:keep])
+            ]
+            observations += list(_build(run2, n // 10).observations)  # id bentrok -> ganti nama
+            observations = [
+                Observation(**{**o.__dict__, "external_post_id": f"baru-{i}"})
+                if i >= keep else o
+                for i, o in enumerate(observations)
+            ]
+            result = InspectionResult(
+                platform=Platform.X, inspection_run_id=run2.run_id,
+                outcome=InspectionOutcome.COMPLETED, collector=CollectorInfo("bench", "0"),
+                coverage=Coverage((Capability.INSPECT_REPLIES,), True, len(observations)),
+                observations=tuple(observations),
+            )
+            assert ingest_result(run2, result, batch_size=1000).ok
+            with CaptureQueriesContext(connection) as ctx:
+                started = time.perf_counter()
+                outcome = reconcile_run(run2)
+                elapsed = time.perf_counter() - started
+            raise _Rollback((elapsed, len(ctx), outcome.counts))
+    except _Rollback as done:
+        return done.args[0]
+
+
+print(f"\n{'N':>6} {'detik':>8} {'ms/objek':>9} {'query':>7}  hasil")
+for n in (1000, 5000, 10000):
+    seconds, queries, counts = measure_reconcile(n)
+    shown = {k: v for k, v in counts.items() if v}
+    print(f"{n:>6} {seconds:>8.2f} {seconds / n * 1000:>9.2f} {queries:>7}  {shown}", flush=True)

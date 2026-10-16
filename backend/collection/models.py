@@ -107,6 +107,9 @@ class InspectionRun(models.Model):
     # Status ingestion (WP-1.3): None = belum pernah di-ingest; IN_PROGRESS = proses terputus bila
     # tidak pernah selesai; FINISHED / FINISHED_WITH_PROBLEMS + ringkasan laporan.
     ingestion = models.JSONField(null=True, blank=True)
+    # Status rekonsiliasi (WP-1.4): None = belum direkonsiliasi; selain itu state DONE/SKIPPED/
+    # BLOCKED beserta alasan, hitungan, dan run pembanding.
+    reconciliation = models.JSONField(null=True, blank=True)
 
     class Meta:
         ordering = ["target_id", "sequence"]
@@ -207,6 +210,16 @@ class Post(models.Model):
     objects = PostQuerySet.as_manager()
 
     class Meta:
+        # Kandidat tanpa ID selalu dibuat pada run yang pertama kali melihatnya. Indeks parsial ini
+        # membuat pencarian "kandidat run X" cepat TANPA bergantung pada statistik tabel (yang basi
+        # setelah muatan besar dan pernah membuat perencana memilih rencana kuadratik).
+        indexes = [
+            models.Index(
+                fields=["first_seen_run"],
+                condition=Q(external_post_id__isnull=True),
+                name="post_candidates_by_run_idx",
+            ),
+        ]
         constraints = [
             models.UniqueConstraint(
                 fields=["platform", "external_post_id"],
@@ -264,6 +277,10 @@ class PostObservation(AppendOnlyModel):
     actor_display_name = models.CharField(max_length=500, null=True, blank=True)  # noqa: DJ001 - NULL berarti 'tidak diketahui', beda dari string kosong
     parent_unknown = models.BooleanField(default=False)
     identity_needs_verification = models.BooleanField(default=False)
+    # Hash isi ternormalisasi (collection.content). '' dan versi 0 = tanpa hash (data lama);
+    # perbandingan lalu dihitung ulang dari data mentah.
+    content_hash = models.CharField(max_length=64, blank=True, default="")
+    content_hash_version = models.PositiveSmallIntegerField(default=0)
     recorded_at = models.DateTimeField(default=timezone.now, editable=False)
 
     class Meta:
@@ -285,6 +302,11 @@ class PostObservation(AppendOnlyModel):
             models.CheckConstraint(
                 condition=Q(collection_status__in=[m.value for m in CollectionStatus]),
                 name="observation_status_valid",
+            ),
+            models.CheckConstraint(
+                condition=(Q(content_hash="") & Q(content_hash_version=0))
+                | (Q(content_hash__regex=r"^[0-9a-f]{64}$") & Q(content_hash_version__gte=1)),
+                name="observation_content_hash_valid",
             ),
         ]
         indexes = [
@@ -362,3 +384,73 @@ class PostRelation(AppendOnlyModel):
 
     def __str__(self) -> str:
         return f"{self.from_post} {self.relation_type} {self.to_post or self.to_actor}"
+
+
+class ReconciliationStatus(models.TextChoices):
+    """Status rekonsiliasi antar-run (PRD bagian 9.2)."""
+
+    NEW = "NEW", "NEW"
+    UNCHANGED = "UNCHANGED", "UNCHANGED"
+    MODIFIED = "MODIFIED", "MODIFIED"
+    NOT_OBSERVED = "NOT_OBSERVED", "NOT_OBSERVED"
+    CONFIRMED_UNAVAILABLE = "CONFIRMED_UNAVAILABLE", "CONFIRMED_UNAVAILABLE"
+
+
+class ObservationReconciliation(AppendOnlyModel):
+    """Hasil rekonsiliasi satu objek pada satu run, dibandingkan dengan run-run sebelumnya pada
+    TARGET yang sama (FR-035). Disimpan sebagai data; tidak dihitung ulang saat ditampilkan.
+
+    NOT_OBSERVED hanya berarti 'pernah terlihat, kini tidak muncul': BUKAN bukti penghapusan
+    (FR-036). CONFIRMED_UNAVAILABLE hanya bila adapter menyatakannya eksplisit pada run COMPLETED.
+    """
+
+    run = models.ForeignKey(InspectionRun, on_delete=models.PROTECT, related_name="reconciliations")
+    post = models.ForeignKey(Post, on_delete=models.PROTECT, related_name="reconciliations")
+    status = models.CharField(max_length=24, choices=ReconciliationStatus.choices)
+    previous_observation = models.ForeignKey(
+        PostObservation, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    current_observation = models.ForeignKey(
+        PostObservation, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    changed_fields = models.JSONField(default=list, blank=True)
+    evidence = models.TextField(blank=True, default="")
+    recorded_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["run", "post"], name="uniq_reconciliation_per_run"),
+            models.CheckConstraint(
+                condition=Q(status__in=ReconciliationStatus.values),
+                name="reconciliation_status_valid",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(status="NEW")
+                    & Q(previous_observation__isnull=True)
+                    & Q(current_observation__isnull=False)
+                )
+                | (
+                    Q(status__in=["UNCHANGED", "MODIFIED"])
+                    & Q(previous_observation__isnull=False)
+                    & Q(current_observation__isnull=False)
+                )
+                | (
+                    Q(status__in=["NOT_OBSERVED", "CONFIRMED_UNAVAILABLE"])
+                    & Q(previous_observation__isnull=False)
+                    & Q(current_observation__isnull=True)
+                ),
+                name="reconciliation_observations_match_status",
+            ),
+            models.CheckConstraint(
+                condition=~Q(status="CONFIRMED_UNAVAILABLE") | ~Q(evidence=""),
+                name="reconciliation_unavailable_needs_evidence",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["run", "status"], name="recon_run_status_idx"),
+            models.Index(fields=["post", "run"], name="recon_post_run_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.status}: {self.post} @ run {self.run_id}"
