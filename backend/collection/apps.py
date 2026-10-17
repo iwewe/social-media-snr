@@ -14,3 +14,9 @@ class CollectionConfig(AppConfig):
             from .datasets import register_fixture_adapters
 
             register_fixture_adapters(registry, settings.SNR_FIXTURE_DATASETS_DIR)
+        if settings.SNR_SIMULATION_BASE_URL is not None:
+            from .browser import register_simulated_adapter
+
+            register_simulated_adapter(
+                registry, settings.SNR_SIMULATION_BASE_URL, settings.SNR_SIMULATION_PLATFORM
+            )

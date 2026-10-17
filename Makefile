@@ -22,8 +22,9 @@ typecheck: ## Type-check backend (mypy) dan frontend (tsc)
 > cd backend && DJANGO_SECRET_KEY=ci-only-not-a-secret uv run mypy .
 > cd frontend && npm run -s typecheck
 
-test: ## Test backend (pytest, di container web terhadap PostgreSQL) dan frontend (vitest)
-> docker compose run --rm -T web pytest -q
+test: ## Test backend (pytest di container web; tes browser di worker-browser) dan frontend (vitest)
+> docker compose run --rm -T web pytest -q --ignore=../tests/browser
+> docker compose run --rm -T -v ./tests:/tests -e SNR_REQUIRE_BROWSER=1 worker-browser pytest -c pyproject.toml -q ../tests/browser
 > cd frontend && npm run -s test
 
 fmt: ## Rapikan format kode

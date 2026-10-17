@@ -79,6 +79,16 @@ def test_playwright_inside_adapters_is_allowed(clean: Path) -> None:
     assert check_imports(clean) == []
 
 
+def test_playwright_inside_browser_toolkit_is_allowed(clean: Path) -> None:
+    write(clean, "collection/browser/runtime.py", "from playwright.sync_api import Page\n")
+    assert check_imports(clean) == []
+
+
+def test_playwright_outside_adapters_and_browser_is_still_rejected(clean: Path) -> None:
+    write(clean, "collection/orchestrator/job.py", "import playwright\n")
+    assert check_imports(clean) != []
+
+
 def test_syntax_error_in_scanned_file_fails_loudly(clean: Path) -> None:
     write(clean, "collection/broken.py", "def (:\n")
     with pytest.raises(SyntaxError):
