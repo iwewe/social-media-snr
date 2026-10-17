@@ -236,3 +236,7 @@ class BadIncompleteCapabilities(FakeXAdapter):
         declarations = {c: CapabilityDeclaration(CapabilityStatus.SUPPORTED) for c in Capability}
         del declarations[Capability.PRESERVE_MEDIA]  # tidak dinyatakan
         return Capabilities(self.platform, declarations)
+
+
+class BadUnknownQueue(FakeXAdapter):
+    execution_queue = "gpu"  # antrean yang tidak dilayani siapa pun

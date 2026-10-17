@@ -11,6 +11,7 @@ from fake_adapters import (
     BadPublishedFromObserved,
     BadSwallowsAccessRestriction,
     BadSwallowsParseFailure,
+    BadUnknownQueue,
     BadUsesNetworkInValidation,
     BadWrongPlatformInCapabilities,
     FakeXAdapter,
@@ -39,6 +40,7 @@ def test_conforming_adapter_has_no_violations() -> None:
         (BadNondeterministicIds, "C13"),  # ID berubah antarpemanggilan
         (BadWrongPlatformInCapabilities, "C01"),
         (BadIncompleteCapabilities, "C01"),
+        (BadUnknownQueue, "C16"),  # antrean tak dilayani: run akan menggantung PENDING
     ],
 )
 def test_violating_adapter_is_caught_by_the_expected_rule(adapter_class, expected_rule) -> None:
@@ -58,6 +60,7 @@ def test_bypassing_the_capability_gate_is_also_caught_behaviourally() -> None:
         (BadSwallowsParseFailure, {"C12"}),
         (BadSwallowsAccessRestriction, {"C11"}),
         (BadNondeterministicIds, {"C13"}),
+        (BadUnknownQueue, {"C16"}),
         # Menerima semua URL melanggar tiga aturan validasi sekaligus (valid-tapi-salah-jenis,
         # platform lain, dan sampah).
         (BadAcceptsAnyUrl, {"C02", "C03", "C04"}),
