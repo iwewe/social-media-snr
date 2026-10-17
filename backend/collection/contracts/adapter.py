@@ -65,9 +65,15 @@ class Capabilities:
         return self.status(capability).runnable
 
 
+EXECUTION_QUEUES = frozenset({"analysis", "browser"})
+
+
 class Adapter(ABC):
     platform: ClassVar[Platform]
     collector: ClassVar[CollectorInfo]
+    # Antrean Celery tempat adapter dijalankan: adapter browser memakai "browser" (worker-browser,
+    # satu-satunya yang melihat profil browser); lainnya "analysis" (PRD bagian 10).
+    execution_queue: ClassVar[str] = "analysis"
 
     @abstractmethod
     def capabilities(self) -> Capabilities:

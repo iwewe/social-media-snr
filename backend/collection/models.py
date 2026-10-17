@@ -26,6 +26,7 @@ from collection.contracts.enums import CollectionStatus, SourceMethod, SourceObj
 from investigations.enums import Platform
 from investigations.models import CollectionTarget, Investigation
 
+from ._enums import RunStatus
 from .errors import AppendOnlyViolation
 
 
@@ -36,19 +37,6 @@ def _choices(enum_cls: Any) -> list[tuple[str, str]]:
 class IdentityStatus(models.TextChoices):
     VERIFIED = "VERIFIED", "Terverifikasi"
     NEEDS_VERIFICATION = "NEEDS_VERIFICATION", "Perlu verifikasi identitas"
-
-
-class RunStatus(models.TextChoices):
-    """Status InspectionRun (PRD bagian 9.1). Tabel transisi diuji pada WP-1.6."""
-
-    PENDING = "PENDING", "PENDING"
-    RUNNING = "RUNNING", "RUNNING"
-    COMPLETED = "COMPLETED", "COMPLETED"
-    PARTIAL = "PARTIAL", "PARTIAL"
-    FAILED = "FAILED", "FAILED"
-    ACCESS_RESTRICTED = "ACCESS_RESTRICTED", "ACCESS_RESTRICTED"
-    UNSUPPORTED = "UNSUPPORTED", "UNSUPPORTED"
-    REVIEW_REQUIRED = "REVIEW_REQUIRED", "REVIEW_REQUIRED"
 
 
 class RelationType(models.TextChoices):
@@ -113,6 +101,11 @@ class InspectionRun(models.Model):
     # Status penyimpanan artefak (WP-1.5a): None = belum pernah; IN_PROGRESS = terputus bila tidak
     # pernah selesai; FINISHED / FINISHED_WITH_PROBLEMS + ringkasan dan jalur manifest.
     preservation = models.JSONField(null=True, blank=True)
+    # Identitas pekerja yang mengklaim run (diagnostik; mis. host:pid:task) dan alasan tinjauan.
+    claimed_by = models.CharField(max_length=200, blank=True, default="")
+    # Diisi saat REVIEW_REQUIRED: {"reasons": [...], "outcome": <hasil adapter>,
+    # "acknowledged": ...}
+    review = models.JSONField(null=True, blank=True)
 
     class Meta:
         ordering = ["target_id", "sequence"]

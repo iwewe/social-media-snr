@@ -158,3 +158,13 @@ CSRF_TRUSTED_ORIGINS = [
 
 # Batas ukuran satu artefak preservasi (byte). Nilai awal usulan; belum ada keputusan di PRD.
 SNR_ARTIFACT_MAX_BYTES = int(os.environ.get("SNR_ARTIFACT_MAX_BYTES", str(512 * 1024 * 1024)))
+
+# --- Orkestrasi inspeksi (WP-1.6). PRD tidak menetapkan angka; nilai None = tidak dibatasi dan
+# harus ditetapkan setelah pengukuran (pilot I4). Tidak ada angka bawaan yang diklaim final.
+SNR_INSPECTION_SOFT_TIME_LIMIT = (
+    int(os.environ["SNR_INSPECTION_SOFT_TIME_LIMIT"])
+    if os.environ.get("SNR_INSPECTION_SOFT_TIME_LIMIT")
+    else None
+)
+# Adapter yang dimuat saat startup: daftar jalur titik ke kelas tanpa argumen, dipisah koma.
+SNR_ADAPTERS = [a for a in os.environ.get("SNR_ADAPTERS", "").split(",") if a]

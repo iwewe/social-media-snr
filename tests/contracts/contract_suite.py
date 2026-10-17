@@ -23,6 +23,7 @@ Aturan:
  C13 identitas objek deterministik antarpemanggilan (dasar tanpa duplikasi, NFR-03)
  C14 adapter tidak melanggar invarian hasil (galat kontrak = pelanggaran)
  C15 skenario opsional (empty_post, identity_missing) berperilaku benar bila tersedia
+ C16 execution_queue adalah antrean yang dikenal orchestrator (WP-1.6)
 """
 
 import socket
@@ -32,6 +33,7 @@ from dataclasses import dataclass
 from unittest import mock
 
 from collection.contracts import (
+    EXECUTION_QUEUES,
     Adapter,
     Capability,
     ContractViolation,
@@ -139,6 +141,10 @@ def check_contract(harness: ContractHarness) -> list[str]:  # noqa: C901 - dafta
         assert set(caps.declarations) == set(Capability), "ada kemampuan yang tidak dinyatakan"
 
     c.attempt("C01", check_capabilities)
+
+    # C16 antrean eksekusi
+    if probe.execution_queue not in EXECUTION_QUEUES:
+        c.fail("C16", f"execution_queue={probe.execution_queue!r} tidak dikenal; pilihan: {sorted(EXECUTION_QUEUES)}")
 
     # C06 inspect tidak ditimpa
     if type(probe).inspect is not Adapter.inspect:

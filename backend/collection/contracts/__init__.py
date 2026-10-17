@@ -1,6 +1,6 @@
 """Kontrak observasi dan adapter (WP-1.1). API publik paket ini."""
 
-from .adapter import Adapter, Capabilities, CapabilityDeclaration
+from .adapter import EXECUTION_QUEUES, Adapter, Capabilities, CapabilityDeclaration
 from .enums import (
     ArtifactKind,
     Capability,
@@ -25,6 +25,7 @@ from .result import (
 from .target import TargetUrlInfo
 
 __all__ = [
+    "EXECUTION_QUEUES",
     "Adapter",
     "ArtifactCapture",
     "ArtifactKind",
