@@ -229,3 +229,83 @@ details.help summary::-webkit-details-marker {
     padding: 12px;
   }
 }
+
+/* --- inspeksi (WP-1.9b) --- */
+.badge.state {
+  font-weight: 600;
+}
+.badge.state[data-state="not_inspected"] {
+  color: var(--muted);
+}
+.badge.state[data-state="in_progress"] {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.badge.state[data-state="access_failed"] {
+  color: var(--danger);
+  background: var(--danger-bg);
+  border-color: var(--danger);
+}
+.badge.state[data-state="partial"],
+.badge.state[data-state="needs_review"] {
+  border-style: dashed;
+  border-width: 2px;
+}
+
+.run {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--border);
+}
+.run[data-status="ACCESS_RESTRICTED"],
+.run[data-status="FAILED"],
+.run[data-status="UNSUPPORTED"] {
+  border-left-color: var(--danger);
+}
+.run[data-status="PARTIAL"],
+.run[data-status="REVIEW_REQUIRED"] {
+  border-left-style: dashed;
+}
+
+.message {
+  margin: 6px 0;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.message p {
+  margin: 2px 0;
+}
+.message[data-level="error"] {
+  color: var(--danger);
+  background: var(--danger-bg);
+  border-color: var(--danger);
+}
+.message[data-level="warning"] {
+  border-style: dashed;
+}
+.message .action {
+  font-style: italic;
+}
+
+dl.coverage {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 16px;
+  margin: 8px 0;
+}
+dl.coverage dt {
+  color: var(--muted);
+}
+dl.coverage dd {
+  margin: 0;
+}
+
+details.older-run,
+details.technical {
+  margin: 6px 0;
+}
+details.technical ul {
+  padding-left: 1.2rem;
+  overflow-wrap: anywhere;
+}

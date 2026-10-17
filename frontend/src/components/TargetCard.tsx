@@ -4,8 +4,11 @@ import type { FormEvent } from "react";
 import { api } from "../api/client";
 import type { Meta, Target } from "../api/types";
 import { ContextHelp } from "../help/ContextHelp";
+import { useInspections } from "../hooks/useInspections";
 import { errorText } from "../api/errorText";
+import { DataStateBadge } from "./DataStateBadge";
 import { ErrorMessage } from "./ErrorMessage";
+import { InspectionPanel } from "./InspectionPanel";
 
 function label(choices: { value: string; label: string }[], value: string): string {
   return choices.find((c) => c.value === value)?.label ?? value;
@@ -25,6 +28,8 @@ export function TargetCard({
   const [showHistory, setShowHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Setelah run final, minta induk memuat ulang agar ringkasan target ikut diperbarui.
+  const inspections = useInspections(target, onChanged);
 
   async function revise(event: FormEvent) {
     event.preventDefault();
@@ -43,18 +48,16 @@ export function TargetCard({
   }
 
   const ctx = target.context;
-  // Tiga keadaan yang dibedakan (NFR-08): belum diperiksa, tidak ada data, gagal mengakses.
-  // Pada tahap ini hanya "belum diperiksa" yang mungkin, karena InspectionRun belum ada.
-  const inspected = target.latest_inspection !== null;
+  // Keadaan data (NFR-08) dari run terbaru; sebelum riwayat dimuat dipakai ringkasan dari server.
+  const state =
+    inspections.runs?.[0]?.data_state ?? target.latest_inspection?.data_state ?? "not_inspected";
 
   return (
     <article className="card" aria-label={`Target ${target.normalized_url}`}>
       <header>
         <span className="badge">{label(meta.platforms, target.platform)}</span>{" "}
         <span className="badge">{label(meta.target_types, target.target_type)}</span>{" "}
-        <span className="badge status" data-status={inspected ? "inspected" : "not-inspected"}>
-          {inspected ? "Sudah diperiksa" : "Belum diperiksa"}
-        </span>
+        <DataStateBadge state={state} />
       </header>
       <p className="url">
         <a href={target.normalized_url} target="_blank" rel="noopener noreferrer">
@@ -62,16 +65,15 @@ export function TargetCard({
         </a>
       </p>
 
-      <div className="row">
-        <button type="button" disabled title="Belum tersedia pada tahap ini">
-          Inspect
-        </button>
-        <ContextHelp id="startInspection" />
-        <button type="button" disabled title="Belum tersedia pada tahap ini">
-          Inspect Again
-        </button>
-        <ContextHelp id="reinspection" />
-      </div>
+      {target.notices.map((n) => (
+        <div key={n.code} className="message" data-level={n.level} role="note">
+          <strong>{n.title}</strong>
+          <p>{n.detail}</p>
+          {n.action && <p className="action">{n.action}</p>}
+        </div>
+      ))}
+
+      <InspectionPanel inspections={inspections} />
 
       {ctx && (
         <section>

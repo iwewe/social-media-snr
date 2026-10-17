@@ -37,6 +37,19 @@ describe("teks petunjuk (PRD bagian 12)", () => {
     expect(body).toContain("data baru");
   });
 
+  it("inspeksi tidak lagi mengaku 'belum tersedia'", () => {
+    expect(HELP.startInspection.body.toLowerCase()).not.toContain("belum tersedia");
+  });
+
+  it("tiga keadaan data dibedakan dan kegagalan tidak berarti tidak ada balasan", () => {
+    const body = HELP.dataStates.body.toLowerCase();
+    expect(body).toContain("belum diperiksa");
+    expect(body).toContain("tidak ada data");
+    expect(body).toContain("gagal mengakses data");
+    expect(body).toContain("bukan berarti tidak ada balasan");
+    expect(body).toContain("tidak boleh dianggap dihapus");
+  });
+
   it("label ketidakpastian menjelaskan UNDETERMINED bukan netral", () => {
     const body = HELP.uncertaintyLabels.body;
     expect(body).toContain("UNDETERMINED");
