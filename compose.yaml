@@ -11,6 +11,8 @@ x-backend-env: &backend-env
   POSTGRES_HOST: postgres
   CELERY_BROKER_URL: redis://valkey:6379/0
   SNR_DATA_ROOT: /srv/snr
+  SNR_SWEEP_OLDER_THAN_SECONDS: ${SNR_SWEEP_OLDER_THAN_SECONDS:-}
+  SNR_SWEEP_INTERVAL_SECONDS: ${SNR_SWEEP_INTERVAL_SECONDS:-}
 
 x-backend-base: &backend-base
   user: "${SNR_UID:-1000}:${SNR_GID:-1000}"
@@ -61,6 +63,7 @@ services:
       - ./backend:/app
       - ./tests:/tests
       - ./compose.yaml:/compose.yaml:ro  # dibaca tes isolasi
+      - ./.env.example:/.env.example:ro  # dibaca tes konfigurasi penyapu
       - ./datasets:/datasets:ro  # dataset uji/impor (WP-1.7); dibaca tes dan adapter dataset
       - ${SNR_HOST_DATA:-./snr-data}/evidence:/srv/snr/evidence
       - ${SNR_HOST_DATA:-./snr-data}/exports:/srv/snr/exports
@@ -82,6 +85,19 @@ services:
       - ./backend:/app
       - ./datasets:/datasets:ro
       - ${SNR_HOST_DATA:-./snr-data}/evidence:/srv/snr/evidence
+
+  # Penjadwal (celery beat): hanya mengirim tugas penyapu run basi ke antrean. Tidak memasang evidence
+  # maupun browser-profiles. Aktif bila SNR_SWEEP_OLDER_THAN_SECONDS dan SNR_SWEEP_INTERVAL_SECONDS
+  # keduanya diisi di .env; tanpa itu proses ini hanya menganggur.
+  scheduler:
+    <<: *backend-base
+    build:
+      context: .
+      dockerfile: deployment/backend.Dockerfile
+      target: app
+    command: celery -A config beat -l info --schedule /tmp/celerybeat-schedule
+    volumes:
+      - ./backend:/app
 
   # Hanya worker ini yang melihat browser-profiles (PRD bagian 10: sesi browser terpisah dari bukti).
   worker-browser:

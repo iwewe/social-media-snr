@@ -7,6 +7,8 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from config.sweeper import beat_schedule
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -166,6 +168,10 @@ SNR_INSPECTION_SOFT_TIME_LIMIT = (
     if os.environ.get("SNR_INSPECTION_SOFT_TIME_LIMIT")
     else None
 )
+# Penyapu run basi terjadwal (celery beat). Aktif hanya bila DUA nilai ditetapkan eksplisit; tanpa
+# angka bawaan (harus diukur: `manage.py inspection_durations`). Salah konfigurasi menghentikan
+# startup.
+CELERY_BEAT_SCHEDULE = beat_schedule(os.environ, SNR_INSPECTION_SOFT_TIME_LIMIT)
 # Adapter yang dimuat saat startup: daftar jalur titik ke kelas tanpa argumen, dipisah koma.
 # Direktori dataset uji/impor (WP-1.7). Kosong = adapter dataset tidak terdaftar sama sekali.
 SNR_FIXTURE_DATASETS_DIR = (

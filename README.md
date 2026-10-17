@@ -28,7 +28,7 @@ jauh, buka lewat SSH tunnel: `ssh -L 5173:127.0.0.1:5173 <user>@<host>`. Buat ak
 `docker compose exec web python manage.py createsuperuser`.
 
 Layanan Compose: `postgres`, `valkey`, `web` (127.0.0.1:8000), `worker-analysis`, `worker-browser`,
-`frontend` (127.0.0.1:5173). Hanya `worker-browser` yang memasang `browser-profiles/`; web dan
+`scheduler` (celery beat; penyapu run basi), `frontend` (127.0.0.1:5173). Hanya `worker-browser` yang memasang `browser-profiles/`; web dan
 worker analisis tidak dapat melihatnya. Port database dan Valkey tidak dibuka ke host.
 
 Variabel environment wajib untuk menjalankan Django: `DJANGO_SECRET_KEY` (atau `DJANGO_DEBUG=1`
