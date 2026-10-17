@@ -42,7 +42,11 @@ semua objek run 1, 1% diedit, 10% baru, 5% hilang.
 
 Sekitar 0,6–0,7 ms per objek, linear; jumlah query nyaris tetap (dijaga tes terhadap N+1).
 
-### Anomali performa yang BELUM terjelaskan
+### Anomali performa (SUDAH terjelaskan dan diperbaiki: ADR 0020)
+
+> Catatan lama di bawah ditulis sebelum akar masalah ditemukan. Penyebab sebenarnya: rencana query
+> trigger penjaga yang di-cache sesi membeku sebagai Seq Scan. Hipotesis statistik basi/JIT tidak
+> berdiri sendiri. Lihat `0020-anomali-performa-rencana-trigger.md`.
 
 Selama pengukuran, rekonsiliasi dan ingestion beberapa kali **jauh lebih lambat dan tidak konsisten**
 pada data yang sama: 10.000 objek memakan 18 s dan 135 s (normalnya 7 s), dan 5.000 objek sekali 35 s.
@@ -69,4 +73,3 @@ besar dan pantau durasi per batch pada pilot (I4).
 - Aturan v1 adalah asumsi kerja; evaluasi pada data nyata (I4) dapat menaikkan versi.
 - `confirmed_unavailable` belum dihasilkan adapter mana pun; kualitas buktinya ditentukan adapter
   platform (I3).
-- Anomali performa di atas belum dipahami akar penyebabnya.
