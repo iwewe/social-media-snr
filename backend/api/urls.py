@@ -47,6 +47,24 @@ urlpatterns = [
         name="inspection-verify-artifacts",
     ),
     path(
+        "investigations/<int:pk>/members/",
+        views.InvestigationMembersView.as_view(),
+        name="investigation-members",
+    ),
+    path(
+        "investigations/<int:pk>/members/<int:user_id>/role/",
+        views.InvestigationMemberRoleView.as_view(),
+        name="investigation-member-role",
+    ),
+    path(
+        "investigations/<int:pk>/members/<int:user_id>/revoke/",
+        views.InvestigationMemberRevokeView.as_view(),
+        name="investigation-member-revoke",
+    ),
+    path("users/", views.UserListCreateView.as_view(), name="users"),
+    path("users/<int:pk>/activation/", views.UserActivationView.as_view(), name="user-activation"),
+    path("users/<int:pk>/password/", views.UserPasswordView.as_view(), name="user-password"),
+    path(
         "targets/<int:pk>/context-versions/",
         views.TargetContextReviseView.as_view(),
         name="target-context",

@@ -81,7 +81,7 @@ def test_login_logout_flow_with_csrf(user: User) -> None:
         headers={"X-CSRFToken": token},
     )
     assert res.status_code == 200
-    assert res.json() == {"username": "analis", "is_staff": False}
+    assert res.json() == {"username": "analis", "is_staff": False, "is_superuser": False}
     assert "password" not in res.content.decode().lower()
     assert c.get("/api/auth/me/").json()["username"] == "analis"
 

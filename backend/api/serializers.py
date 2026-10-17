@@ -3,7 +3,7 @@
 from rest_framework import serializers
 
 from collection.contracts import Capability
-from investigations.enums import Platform, TargetType
+from investigations.enums import Platform, Role, TargetType
 
 
 class InvestigationInput(serializers.Serializer):
@@ -67,3 +67,25 @@ class AcknowledgeInput(serializers.Serializer):
 class PageInput(serializers.Serializer):
     page = serializers.IntegerField(min_value=1, required=False, default=1)
     page_size = serializers.IntegerField(min_value=1, max_value=200, required=False, default=50)
+
+
+class MemberInput(serializers.Serializer):
+    username = serializers.CharField(max_length=150)
+    role = serializers.ChoiceField(choices=Role.choices)
+
+
+class RoleInput(serializers.Serializer):
+    role = serializers.ChoiceField(choices=Role.choices)
+
+
+class UserCreateInput(serializers.Serializer):
+    username = serializers.CharField(max_length=150)
+    password = serializers.CharField(max_length=128, trim_whitespace=False, write_only=True)
+
+
+class PasswordInput(serializers.Serializer):
+    password = serializers.CharField(max_length=128, trim_whitespace=False, write_only=True)
+
+
+class ActivationInput(serializers.Serializer):
+    active = serializers.BooleanField()

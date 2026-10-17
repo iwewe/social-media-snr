@@ -7,7 +7,9 @@ from rest_framework.response import Response
 from rest_framework.views import exception_handler as drf_exception_handler
 
 from collection.orchestrator import InspectionInProgress, NotAwaitingReview, OrchestrationError
+from investigations.access import InsufficientRole, SuperuserRequired
 from investigations.errors import DomainError, DuplicateTarget
+from investigations.team import AlreadyMember, InactiveUser, LastOwner, NotAMember, UnknownUser
 
 
 def api_exception_handler(exc: Exception, context: dict[str, Any]) -> Response | None:
@@ -22,6 +24,19 @@ def api_exception_handler(exc: Exception, context: dict[str, Any]) -> Response |
         return Response({"detail": str(exc), "code": "not_awaiting_review"}, status=409)
     if isinstance(exc, OrchestrationError):
         return Response({"detail": str(exc), "code": "orchestration_error"}, status=409)
+    if isinstance(exc, InsufficientRole):
+        return Response({"detail": str(exc), "code": "insufficient_role"}, status=403)
+    if isinstance(exc, SuperuserRequired):
+        return Response({"detail": str(exc), "code": "superuser_required"}, status=403)
+    for kind, code, status in (
+        (AlreadyMember, "already_member", 409),
+        (LastOwner, "last_owner", 409),
+        (NotAMember, "not_a_member", 404),
+        (UnknownUser, "user_not_found", 404),
+        (InactiveUser, "inactive_user", 400),
+    ):
+        if isinstance(exc, kind):
+            return Response({"detail": str(exc), "code": code}, status=status)
     if isinstance(exc, Http404):
         # Pesan bawaan Django berbahasa Inggris dan menyebut nama model; jangan diteruskan ke UI.
         return Response({"detail": "Data tidak ditemukan.", "code": "not_found"}, status=404)

@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from investigations import access
 from investigations.models import (
     CollectionTarget,
     Investigation,
@@ -15,7 +16,11 @@ from .runs import latest_inspection_summary
 
 
 def user_repr(user: Any) -> dict[str, Any]:
-    return {"username": user.get_username(), "is_staff": bool(user.is_staff)}
+    return {
+        "username": user.get_username(),
+        "is_staff": bool(user.is_staff),
+        "is_superuser": bool(user.is_superuser),
+    }
 
 
 def proposition_repr(p: Proposition) -> dict[str, Any]:
@@ -84,8 +89,11 @@ def target_repr(t: CollectionTarget) -> dict[str, Any]:
     }
 
 
-def investigation_summary(inv: Investigation) -> dict[str, Any]:
+def investigation_summary(inv: Investigation, user: Any) -> dict[str, Any]:
     return {
+        # Peran pengguna ini: OWNER/MEMBER/VIEWER atau ADMIN (super admin).
+        "my_role": access.effective_role(user, inv),
+        "member_count": inv.memberships.filter(revoked_at__isnull=True).count(),
         "id": inv.pk,
         "name": inv.name,
         "description": inv.description,
@@ -96,9 +104,32 @@ def investigation_summary(inv: Investigation) -> dict[str, Any]:
     }
 
 
-def investigation_detail(inv: Investigation) -> dict[str, Any]:
+def investigation_detail(inv: Investigation, user: Any) -> dict[str, Any]:
     return {
-        **investigation_summary(inv),
+        **investigation_summary(inv, user),
         "issues": [issue_repr(i) for i in inv.issues.all()],
         "targets": [target_repr(t) for t in inv.targets.all()],
+    }
+
+
+def member_repr(m: Any) -> dict[str, Any]:
+    return {
+        "user_id": m.user_id,
+        "username": m.user.get_username(),
+        "role": m.role,
+        "since": m.created_at.isoformat(),
+        "added_by": m.added_by.get_username(),
+    }
+
+
+def account_repr(u: Any, active_memberships: int) -> dict[str, Any]:
+    """Akun untuk super admin. Tanpa hash kata sandi atau data sesi."""
+    return {
+        "id": u.pk,
+        "username": u.get_username(),
+        "is_active": u.is_active,
+        "is_superuser": u.is_superuser,
+        "last_login": u.last_login.isoformat() if u.last_login else None,
+        "date_joined": u.date_joined.isoformat(),
+        "active_memberships": active_memberships,
     }

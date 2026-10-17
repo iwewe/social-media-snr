@@ -12,11 +12,12 @@ from django.db import IntegrityError, transaction
 from django.db.models import Max
 from django.utils import timezone
 
-from .enums import InitialStance, TargetType
+from .enums import InitialStance, Role, TargetType
 from .errors import DuplicateTarget, InvalidContext
 from .models import (
     CollectionTarget,
     Investigation,
+    InvestigationMembership,
     Issue,
     IssueContextVersion,
     Proposition,
@@ -27,11 +28,18 @@ from .models import (
 User = AbstractBaseUser
 
 
+@transaction.atomic
 def create_investigation(*, user: User, name: str, description: str = "") -> Investigation:
     name = name.strip()
     if not name:
         raise InvalidContext("Nama investigasi wajib diisi.")
-    return Investigation.objects.create(name=name, description=description, created_by=user)  # type: ignore[misc]
+    investigation = Investigation.objects.create(  # type: ignore[misc]
+        name=name, description=description, created_by=user
+    )
+    InvestigationMembership.objects.create(  # type: ignore[misc]
+        investigation=investigation, user=user, role=Role.OWNER, added_by=user
+    )
+    return investigation
 
 
 @transaction.atomic

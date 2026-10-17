@@ -1,39 +1,55 @@
 from typing import Any
 
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.models import AbstractBaseUser
+from django.contrib.auth import authenticate, get_user_model, login, logout
+from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db.models import Count
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
-from rest_framework.exceptions import NotAuthenticated
+from rest_framework.exceptions import NotAuthenticated, ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 
 from collection.models import InspectionRun
 from collection.orchestrator import acknowledge_review, request_inspection
-from investigations import services
-from investigations.enums import InitialStance, Platform, TargetType
+from investigations import access, services, team
+from investigations.access import SuperuserRequired
+from investigations.enums import InitialStance, Platform, Role, TargetType
 from investigations.errors import InvalidContext
-from investigations.models import CollectionTarget, Investigation, Issue, Proposition
+from investigations.models import InvestigationMembership, Proposition
 from preservation import verification
 from preservation.exports import ensure_exportable
-from preservation.models import EvidenceArtifact, VerificationResult
+from preservation.models import VerificationResult
 from preservation.storage import PathNotAllowed, resolve_inside_evidence
 
 from . import presenters, runs
+from .access import (
+    artifact_for,
+    investigation_for,
+    issue_for,
+    run_for,
+    target_for,
+)
 from .base import ApiView
 from .lockout import lockout_response
 from .serializers import (
     AcknowledgeInput,
+    ActivationInput,
     ContextRevisionInput,
     InspectionInput,
     InvestigationInput,
     IssueInput,
+    MemberInput,
     PageInput,
+    PasswordInput,
     PropositionInput,
+    RoleInput,
     TargetInput,
+    UserCreateInput,
 )
 
 # --- Autentikasi ---------------------------------------------------------------------------
@@ -111,26 +127,29 @@ class MetaView(ApiView):
 
 class InvestigationListCreateView(ApiView):
     def get(self, request: Request) -> Response:
-        investigations = Investigation.objects.select_related("created_by")
-        return Response([presenters.investigation_summary(i) for i in investigations])
+        user = _user(request)
+        investigations = access.visible_investigations(user).select_related("created_by")
+        return Response([presenters.investigation_summary(i, user) for i in investigations])
 
     def post(self, request: Request) -> Response:
         data = _valid(InvestigationInput, request)
+        user = _user(request)
         inv = services.create_investigation(
-            user=_user(request), name=data["name"], description=data["description"]
+            user=user, name=data["name"], description=data["description"]
         )
-        return Response(presenters.investigation_detail(inv), status=201)
+        return Response(presenters.investigation_detail(inv, user), status=201)
 
 
 class InvestigationDetailView(ApiView):
     def get(self, request: Request, pk: int) -> Response:
-        inv = get_object_or_404(Investigation, pk=pk)
-        return Response(presenters.investigation_detail(inv))
+        user = _user(request)
+        inv = investigation_for(user, pk, Role.VIEWER)
+        return Response(presenters.investigation_detail(inv, user))
 
 
 class IssueCreateView(ApiView):
     def post(self, request: Request, pk: int) -> Response:
-        inv = get_object_or_404(Investigation, pk=pk)
+        inv = investigation_for(_user(request), pk, Role.MEMBER)
         data = _valid(IssueInput, request)
         issue = services.create_issue(
             investigation=inv,
@@ -143,7 +162,7 @@ class IssueCreateView(ApiView):
 
 class PropositionCreateView(ApiView):
     def post(self, request: Request, pk: int) -> Response:
-        issue = get_object_or_404(Issue, pk=pk)
+        issue = issue_for(_user(request), pk, Role.MEMBER)
         data = _valid(PropositionInput, request)
         prop = services.add_proposition(
             issue=issue, user=_user(request), statement=data["statement"]
@@ -170,7 +189,7 @@ def _stances(data: dict[str, Any]) -> dict[Proposition, str] | None:
 
 class TargetCreateView(ApiView):
     def post(self, request: Request, pk: int) -> Response:
-        inv = get_object_or_404(Investigation, pk=pk)
+        inv = investigation_for(_user(request), pk, Role.MEMBER)
         data = _valid(TargetInput, request)
         target = services.register_target(
             investigation=inv,
@@ -186,7 +205,7 @@ class TargetCreateView(ApiView):
 
 class TargetContextReviseView(ApiView):
     def post(self, request: Request, pk: int) -> Response:
-        target = get_object_or_404(CollectionTarget, pk=pk)
+        target = target_for(_user(request), pk, Role.MEMBER)
         data = _valid(ContextRevisionInput, request)
         services.revise_target_context(
             target=target, user=_user(request), note=data["note"], stances=_stances(data)
@@ -202,7 +221,7 @@ class TargetInspectionsView(ApiView):
     yang sama (AT-01); ditolak 409 bila masih ada run yang berjalan."""
 
     def get(self, request: Request, pk: int) -> Response:
-        target = get_object_or_404(CollectionTarget, pk=pk)
+        target = target_for(_user(request), pk, Role.VIEWER)
         history = (
             InspectionRun.objects.filter(target=target)
             .select_related("requested_by")
@@ -211,7 +230,7 @@ class TargetInspectionsView(ApiView):
         return Response([runs.run_repr(r) for r in history])
 
     def post(self, request: Request, pk: int) -> Response:
-        target = get_object_or_404(CollectionTarget, pk=pk)
+        target = target_for(_user(request), pk, Role.MEMBER)
         data = _valid(InspectionInput, request)
         run = request_inspection(
             target=target, user=_user(request), requested=data.get("requested"), exclusive=True
@@ -222,9 +241,7 @@ class TargetInspectionsView(ApiView):
 
 class InspectionDetailView(ApiView):
     def get(self, request: Request, pk: int) -> Response:
-        run = get_object_or_404(
-            InspectionRun.objects.select_related("requested_by", "target"), pk=pk
-        )
+        run = run_for(_user(request), pk, Role.VIEWER, detail=True)
         return Response(runs.run_detail(run))
 
 
@@ -232,7 +249,7 @@ class InspectionObservationsView(ApiView):
     """Respons mentah per run (belum ada klasifikasi). Berhalaman."""
 
     def get(self, request: Request, pk: int) -> Response:
-        run = get_object_or_404(InspectionRun, pk=pk)
+        run = run_for(_user(request), pk, Role.VIEWER)
         query = PageInput(data=request.query_params)
         query.is_valid(raise_exception=True)
         return Response(
@@ -246,7 +263,7 @@ class InspectionAcknowledgeView(ApiView):
     """Akui tinjauan: hasil adapter yang tercatat dipulihkan; tidak mengubah data run."""
 
     def post(self, request: Request, pk: int) -> Response:
-        run = get_object_or_404(InspectionRun.objects.select_related("requested_by"), pk=pk)
+        run = run_for(_user(request), pk, Role.MEMBER, detail=True)
         data = _valid(AcknowledgeInput, request)
         done = acknowledge_review(run=run, user=_user(request), note=data["note"])
         return Response(runs.run_repr(done))
@@ -271,7 +288,7 @@ class ArtifactVerifyView(ApiView):
     pemeriksaan berhasil menghasilkan putusan; putusannya ada di `result`."""
 
     def post(self, request: Request, pk: int) -> Response:
-        artifact = get_object_or_404(EvidenceArtifact, pk=pk)
+        artifact = artifact_for(_user(request), pk, Role.VIEWER)
         row = verification.verify_artifact(artifact, _user(request))
         return Response(runs.verification_repr(row))
 
@@ -280,7 +297,7 @@ class InspectionVerifyArtifactsView(ApiView):
     """Verifikasi semua artefak sebuah run dan konsistensi manifest-nya."""
 
     def post(self, request: Request, pk: int) -> Response:
-        run = get_object_or_404(InspectionRun, pk=pk)
+        run = run_for(_user(request), pk, Role.VIEWER)
         return Response(runs.run_verification_repr(verification.verify_run(run, _user(request))))
 
 
@@ -294,7 +311,7 @@ class ArtifactContentView(ApiView):
     dan CSP sandbox, agar tidak pernah dieksekusi pada origin aplikasi."""
 
     def get(self, request: Request, pk: int) -> Any:
-        artifact = get_object_or_404(EvidenceArtifact, pk=pk)
+        artifact = artifact_for(_user(request), pk, Role.VIEWER)
         try:
             ensure_exportable(resolve_inside_evidence(artifact.relative_path))
         except (PathNotAllowed, FileNotFoundError, OSError):
@@ -327,11 +344,129 @@ class ArtifactContentView(ApiView):
         return response
 
 
-def _user(request: Request) -> AbstractBaseUser:
+# --- Tim: anggota investigasi (A3; ADR 0021) ----------------------------------------------
+
+
+class InvestigationMembersView(ApiView):
+    """GET: daftar anggota aktif (semua peran dapat melihat siapa timnya). POST: tambah (OWNER)."""
+
+    def get(self, request: Request, pk: int) -> Response:
+        inv = investigation_for(_user(request), pk, Role.VIEWER)
+        rows = inv.memberships.filter(revoked_at__isnull=True).select_related("user", "added_by")
+        return Response([presenters.member_repr(m) for m in rows.order_by("created_at", "id")])
+
+    def post(self, request: Request, pk: int) -> Response:
+        user = _user(request)
+        inv = investigation_for(user, pk, Role.OWNER)
+        data = _valid(MemberInput, request)
+        member = team.grant(
+            investigation=inv,
+            user=team.user_by_username(data["username"]),
+            role=data["role"],
+            added_by=user,
+        )
+        return Response(presenters.member_repr(member), status=201)
+
+
+class InvestigationMemberRoleView(ApiView):
+    def post(self, request: Request, pk: int, user_id: int) -> Response:
+        user = _user(request)
+        inv = investigation_for(user, pk, Role.OWNER)
+        data = _valid(RoleInput, request)
+        member = team.change_role(
+            investigation=inv, user=_account(user_id), role=data["role"], by=user
+        )
+        return Response(presenters.member_repr(member))
+
+
+class InvestigationMemberRevokeView(ApiView):
+    def post(self, request: Request, pk: int, user_id: int) -> Response:
+        user = _user(request)
+        inv = investigation_for(user, pk, Role.OWNER)
+        team.revoke(investigation=inv, user=_account(user_id), by=user)
+        return Response(status=204)
+
+
+def _account(user_id: int) -> Any:
+    return get_object_or_404(get_user_model(), pk=user_id)
+
+
+# --- Akun pengguna: hanya super admin (A3) -------------------------------------------------
+
+
+def _superuser(request: Request) -> Any:
+    user = _user(request)
+    if not user.is_superuser:
+        raise SuperuserRequired("Hanya super admin yang dapat mengelola akun pengguna.")
+    return user
+
+
+def _validated_password(password: str, user: Any) -> None:
+    try:
+        validate_password(password, user=user)
+    except DjangoValidationError as exc:
+        raise ValidationError({"password": list(exc.messages)}) from None
+
+
+class UserListCreateView(ApiView):
+    def get(self, request: Request) -> Response:
+        _superuser(request)
+        counts = dict(
+            InvestigationMembership.objects.filter(revoked_at__isnull=True)
+            .values_list("user_id")
+            .annotate(n=Count("id"))
+        )
+        users = get_user_model().objects.order_by("username")
+        return Response([presenters.account_repr(u, counts.get(u.pk, 0)) for u in users])
+
+    def post(self, request: Request) -> Response:
+        _superuser(request)
+        data = _valid(UserCreateInput, request)
+        model = get_user_model()
+        username = data["username"].strip()
+        try:
+            model._meta.get_field("username").run_validators(username)
+        except DjangoValidationError as exc:
+            raise ValidationError({"username": list(exc.messages)}) from None
+        if model.objects.filter(username__iexact=username).exists():
+            raise ValidationError({"username": ["Nama pengguna itu sudah dipakai."]})
+        candidate = model(username=username)
+        _validated_password(data["password"], candidate)
+        account = model.objects.create_user(username=username, password=data["password"])
+        return Response(presenters.account_repr(account, 0), status=201)
+
+
+class UserActivationView(ApiView):
+    def post(self, request: Request, pk: int) -> Response:
+        admin = _superuser(request)
+        data = _valid(ActivationInput, request)
+        account = _account(pk)
+        if account.pk == admin.pk and not data["active"]:
+            raise ValidationError({"active": ["Anda tidak dapat menonaktifkan akun Anda sendiri."]})
+        account.is_active = data["active"]
+        account.save(update_fields=["is_active"])
+        active = InvestigationMembership.objects.filter(user=account, revoked_at__isnull=True)
+        count = active.count()
+        return Response(presenters.account_repr(account, count))
+
+
+class UserPasswordView(ApiView):
+    def post(self, request: Request, pk: int) -> Response:
+        _superuser(request)
+        data = _valid(PasswordInput, request)
+        account = _account(pk)
+        _validated_password(data["password"], account)
+        account.set_password(data["password"])
+        account.save(update_fields=["password"])
+        return Response(status=204)
+
+
+def _user(request: Request) -> User:
     """Pengguna terautentikasi; lapis kedua di samping IsAuthenticated."""
     user = request.user
     if not user.is_authenticated:
         raise NotAuthenticated()
+    assert isinstance(user, User)
     return user
 
 
