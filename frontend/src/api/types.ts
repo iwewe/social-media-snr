@@ -193,6 +193,40 @@ export interface RunArtifact {
   content_type: string;
   stored_at: string | null;
   post_id: number | null;
+  last_verification: {
+    result: VerificationResult;
+    verified_at: string | null;
+    verified_by: string;
+    purpose: string;
+  } | null;
+}
+
+export type VerificationResult = "MATCH" | "MISMATCH" | "MISSING" | "UNREADABLE";
+
+/** Hasil menghitung ulang SHA-256 dari berkas pada disk. Bukan bukti keaslian konten platform. */
+export interface Verification {
+  id: number;
+  artifact_id: number;
+  result: VerificationResult;
+  purpose: string;
+  verified_at: string | null;
+  verified_by: string;
+  expected_sha256: string;
+  actual_sha256: string | null;
+  expected_size_bytes: number;
+  actual_size_bytes: number | null;
+  message: RunMessage;
+  statement: string;
+}
+
+export type ManifestState = "CONSISTENT" | "ABSENT" | "INCONSISTENT" | "UNTRUSTED";
+
+export interface RunVerification {
+  all_match: boolean;
+  summary: Record<string, number>;
+  verifications: Verification[];
+  manifest: { state: ManifestState; problems: string[]; message: RunMessage };
+  statement: string;
 }
 
 export interface RunDetail extends RunSummary {

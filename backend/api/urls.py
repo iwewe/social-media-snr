@@ -37,6 +37,15 @@ urlpatterns = [
         views.InspectionAcknowledgeView.as_view(),
         name="inspection-acknowledge",
     ),
+    path("artifacts/<int:pk>/verify/", views.ArtifactVerifyView.as_view(), name="artifact-verify"),
+    path(
+        "artifacts/<int:pk>/content/", views.ArtifactContentView.as_view(), name="artifact-content"
+    ),
+    path(
+        "inspections/<int:pk>/verify-artifacts/",
+        views.InspectionVerifyArtifactsView.as_view(),
+        name="inspection-verify-artifacts",
+    ),
     path(
         "targets/<int:pk>/context-versions/",
         views.TargetContextReviseView.as_view(),

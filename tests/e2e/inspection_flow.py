@@ -6,6 +6,7 @@ Env: E2E_BASE_URL, E2E_USER, E2E_PASSWORD, E2E_SHOTS (opsional).
 """
 
 import os
+from urllib.parse import urlsplit
 
 from playwright.sync_api import Page, expect, sync_playwright
 
@@ -144,6 +145,9 @@ def main() -> None:
         inspect(card, "Inspect Again", 4)
         expect(newest(card).locator("[data-run-status]")).to_have_attribute("data-run-status", "COMPLETED")
         open_newest_run(page, card)
+        if SHOTS:  # dipakai tamper_flow untuk membuka halaman bukti run ini
+            with open(f"{SHOTS}/run4.url", "w") as handle:
+                handle.write(urlsplit(page.url).path)
         gone = row(page, "9000000014")
         expect(gone).to_have_attribute("data-reconciliation", "CONFIRMED_UNAVAILABLE")
         expect(gone).to_contain_text("Bukti dari sumber")
@@ -157,6 +161,16 @@ def main() -> None:
         expect(page.get_by_text("tidak membuktikan keaslian konten platform")).to_be_visible()
         shot(page, "13-bukti-run-4")
         step("run 4: dinyatakan tidak tersedia oleh sumber; artefak DOM + manifest dengan SHA-256 (AT-06)")
+
+        # Verifikasi hash ulang dari disk: berkas belum diubah, jadi semuanya cocok (FR-040).
+        page.get_by_role("button", name="Verifikasi semua artefak").click()
+        summary = page.locator("[data-run-verification]")
+        expect(summary).to_have_attribute("data-run-verification", "ok")
+        expect(summary).to_contain_text("2 artefak diperiksa: 2 cocok")
+        expect(summary.locator("[data-manifest]")).to_have_attribute("data-manifest", "CONSISTENT")
+        expect(artifacts.locator("tr[data-kind='dom_snapshot'] [data-verification='MATCH']")).to_be_visible()
+        shot(page, "15-verifikasi-cocok")
+        step("verifikasi hash: semua artefak cocok dan manifest konsisten (FR-040)")
 
         page.set_viewport_size({"width": 390, "height": 800})
         overflow = page.evaluate("document.documentElement.scrollWidth - document.documentElement.clientWidth")

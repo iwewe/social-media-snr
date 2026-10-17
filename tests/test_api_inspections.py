@@ -217,7 +217,8 @@ def test_artifacts_are_listed_with_hashes_but_without_paths(api, django_capture_
     assert {a["kind"] for a in arts} == {"dom_snapshot", "manifest"}
     for a in arts:
         assert len(a["sha256"]) == 64 and a["size_bytes"] > 0
-        assert set(a) == {"id", "kind", "sha256", "size_bytes", "content_type", "stored_at", "post_id"}
+        assert set(a) == {"id", "kind", "sha256", "size_bytes", "content_type", "stored_at", "post_id",
+                          "last_verification"}
     assert detail(api, ids[0])["artifacts"] != arts
 
 

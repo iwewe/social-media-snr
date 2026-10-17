@@ -18,9 +18,15 @@ from collection.models import (
     PostRelation,
     RunStatus,
 )
-from preservation.models import EvidenceArtifact
+from preservation.models import ArtifactVerification, EvidenceArtifact
 
-from .messages import Message, run_messages
+from .messages import (
+    INTEGRITY_STATEMENT,
+    MANIFEST_MESSAGES,
+    VERIFICATION_MESSAGES,
+    Message,
+    run_messages,
+)
 
 # Keadaan data (NFR-08 + keadaan operasional):
 NOT_INSPECTED = "not_inspected"  # belum pernah ada run
@@ -164,9 +170,56 @@ def run_detail(run: InspectionRun) -> dict[str, Any]:
     }
 
 
-def artifact_repr(a: EvidenceArtifact) -> dict[str, Any]:
-    # Tanpa jalur berkas (internal). Isi dan verifikasi hash ada di WP-1.10.
+def verification_repr(v: ArtifactVerification) -> dict[str, Any]:
+    """Hasil verifikasi hash. Tanpa jalur berkas; pesan dari kode hasil, bukan teks bebas."""
     return {
+        "id": v.pk,
+        "artifact_id": v.artifact_id,
+        "result": v.result,
+        "purpose": v.purpose,
+        "verified_at": _iso(v.verified_at),
+        "verified_by": v.verified_by.get_username(),
+        "expected_sha256": v.expected_sha256,
+        "actual_sha256": v.actual_sha256,
+        "expected_size_bytes": v.expected_size,
+        "actual_size_bytes": v.actual_size,
+        "message": VERIFICATION_MESSAGES[v.result].to_dict(),
+        "statement": INTEGRITY_STATEMENT,
+    }
+
+
+def run_verification_repr(outcome: dict[str, Any]) -> dict[str, Any]:
+    manifest = outcome["manifest"]
+    return {
+        "all_match": outcome["all_match"],
+        "summary": outcome["summary"],
+        "verifications": [verification_repr(v) for v in outcome["verifications"]],
+        "manifest": {
+            "state": manifest["state"],
+            "problems": manifest["problems"],
+            "message": MANIFEST_MESSAGES[manifest["state"]].to_dict(),
+        },
+        "statement": INTEGRITY_STATEMENT,
+    }
+
+
+def artifact_repr(a: EvidenceArtifact) -> dict[str, Any]:
+    # Tanpa jalur berkas (internal). Verifikasi dan unduhan lewat endpoint khusus (WP-1.10).
+    last = (
+        ArtifactVerification.objects.filter(artifact=a)
+        .select_related("verified_by")
+        .order_by("-id")
+        .first()
+    )
+    return {
+        "last_verification": None
+        if last is None
+        else {
+            "result": last.result,
+            "verified_at": _iso(last.verified_at),
+            "verified_by": last.verified_by.get_username(),
+            "purpose": last.purpose,
+        },
         "id": a.pk,
         "kind": a.kind,
         "sha256": a.sha256,

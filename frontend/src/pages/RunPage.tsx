@@ -42,7 +42,7 @@ export function RunPage() {
       </h1>
       <RunCard run={run} linkToDetail={false} />
       <ReviewPanel run={run} onAcknowledged={load} />
-      <ArtifactList artifacts={run.artifacts} preservation={run.preservation} />
+      <ArtifactList runId={run.id} artifacts={run.artifacts} preservation={run.preservation} />
       <section aria-label="Respons mentah">
         <h2>
           Respons mentah <ContextHelp id="viewResponses" />

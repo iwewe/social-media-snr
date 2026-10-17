@@ -353,3 +353,72 @@ def run_messages(run: InspectionRun) -> list[Message]:
         messages.append(ARTIFACTS_REJECTED)
 
     return messages
+
+
+VERIFICATION_MESSAGES: dict[str, Message] = {
+    "MATCH": Message(
+        "verification_match",
+        INFO,
+        "Hash cocok",
+        "Berkas yang tersimpan masih sama dengan saat disimpan (hash dan ukuran dihitung ulang dan "
+        "sama dengan catatan).",
+    ),
+    "MISMATCH": Message(
+        "verification_mismatch",
+        ERROR,
+        "Berkas berbeda dari saat disimpan",
+        "Hash atau ukuran yang dihitung ulang tidak sama dengan catatan. Berkas ini tidak boleh "
+        "dipakai sebagai bukti sampai penyebabnya dijelaskan. Kejadian ini tercatat permanen.",
+        "Laporkan ke administrator; periksa cadangan dan akses ke penyimpanan bukti.",
+    ),
+    "MISSING": Message(
+        "verification_missing",
+        ERROR,
+        "Berkas bukti tidak ditemukan",
+        "Catatan artefak ada, tetapi berkasnya tidak ada di penyimpanan bukti. Kejadian ini "
+        "tercatat permanen.",
+        "Laporkan ke administrator; pulihkan dari cadangan bila tersedia.",
+    ),
+    "UNREADABLE": Message(
+        "verification_unreadable",
+        ERROR,
+        "Berkas bukti tidak dapat diverifikasi",
+        "Berkas tidak dapat dibaca secara aman (jalur tidak sah, symlink, atau galat baca). "
+        "Hasilnya tidak dapat dipastikan. Kejadian ini tercatat permanen.",
+        "Laporkan ke administrator.",
+    ),
+}
+MANIFEST_MESSAGES: dict[str, Message] = {
+    "CONSISTENT": Message(
+        "manifest_consistent",
+        INFO,
+        "Manifest konsisten",
+        "Daftar artefak di manifest sama dengan catatan artefak run ini (hash dan ukuran).",
+    ),
+    "ABSENT": Message(
+        "manifest_absent",
+        WARNING,
+        "Tidak ada manifest",
+        "Run ini tidak memiliki manifest tersimpan, sehingga daftar artefak tidak dapat "
+        "dibandingkan dengan sumber kedua.",
+    ),
+    "INCONSISTENT": Message(
+        "manifest_inconsistent",
+        ERROR,
+        "Manifest tidak sesuai dengan catatan artefak",
+        "Daftar di manifest berbeda dari catatan artefak di basis data. Salah satunya tidak utuh.",
+        "Laporkan ke administrator.",
+    ),
+    "UNTRUSTED": Message(
+        "manifest_untrusted",
+        ERROR,
+        "Manifest tidak dapat dipercaya",
+        "Manifest sendiri tidak lolos verifikasi hash atau tidak dapat dibaca, sehingga isinya "
+        "tidak dipakai sebagai pembanding.",
+        "Laporkan ke administrator.",
+    ),
+}
+INTEGRITY_STATEMENT = (
+    "Hash memeriksa apakah berkas yang tersimpan masih sama dengan saat di-hash. Hash tidak "
+    "membuktikan bahwa konten platform autentik, lengkap, atau benar secara faktual."
+)

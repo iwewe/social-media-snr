@@ -2,6 +2,7 @@
 ada pada WP-1.5). Basis data menyimpan indeks dan penunjuk berkas; berkas ada di filesystem lokal
 lewat preservation.storage (PRD bagian 10, FR-038)."""
 
+from django.conf import settings
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
@@ -80,3 +81,44 @@ class EvidenceArtifact(AppendOnlyModel):
             content_type=content_type,
             note=note,
         )
+
+
+class VerificationResult(models.TextChoices):
+    MATCH = "MATCH", "MATCH"
+    MISMATCH = "MISMATCH", "MISMATCH"
+    MISSING = "MISSING", "MISSING"
+    UNREADABLE = "UNREADABLE", "UNREADABLE"
+
+
+class ArtifactVerification(AppendOnlyModel):
+    """Riwayat verifikasi hash artefak (FR-040). Append-only: ketidakcocokan yang pernah terjadi
+    tidak dapat dihapus. Jalur berkas tidak dicatat; hanya hash/ukuran yang diharapkan dan yang
+    dihitung ulang. Hash menunjukkan berkas tidak berubah sejak disimpan, BUKAN keaslian konten."""
+
+    artifact = models.ForeignKey(
+        EvidenceArtifact, on_delete=models.PROTECT, related_name="verifications"
+    )
+    verified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    verified_at = models.DateTimeField(default=timezone.now, editable=False)
+    purpose = models.CharField(max_length=20, help_text="verify | verify_run | download")
+    result = models.CharField(max_length=12, choices=VerificationResult.choices)
+    expected_sha256 = models.CharField(max_length=64)
+    expected_size = models.PositiveBigIntegerField()
+    actual_sha256 = models.CharField(max_length=64, null=True, blank=True)  # noqa: DJ001 - NULL = tidak terhitung
+    actual_size = models.PositiveBigIntegerField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["artifact_id", "-id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(result__in=VerificationResult.values), name="verification_result_valid"
+            ),
+            models.CheckConstraint(
+                condition=Q(result="MATCH", actual_sha256=models.F("expected_sha256"))
+                | ~Q(result="MATCH"),
+                name="verification_match_means_equal_hash",
+            ),
+        ]
+        indexes = [models.Index(fields=["artifact", "-id"], name="verification_artifact_idx")]

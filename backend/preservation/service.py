@@ -36,7 +36,7 @@ from collection.contracts import (
 from collection.models import InspectionRun
 
 from . import manifest as manifest_module
-from .models import EvidenceArtifact
+from .models import EvidenceArtifact, VerificationResult
 from .policy import ArtifactPolicy, PolicyDecision
 from .storage import (
     EvidenceStorageError,
@@ -349,19 +349,21 @@ def make_artifact_sink(policy: ArtifactPolicy | None = None, max_bytes: int | No
 def verify_run_artifacts(run: InspectionRun) -> list[dict[str, str]]:
     """Periksa hash seluruh artefak run terhadap berkas di disk (FR-040, AT-06).
 
-    Mengembalikan daftar masalah; kosong berarti semua cocok. Hash hanya membuktikan berkas masih
-    sama dengan saat di-hash, bukan keaslian konten platform (PRD bagian 10)."""
+    Mengembalikan daftar masalah; kosong berarti semua cocok. Satu implementasi pemeriksaan
+    dipakai bersama API verifikasi (`preservation.verification`): ukuran, symlink, dan berkas
+    non-biasa ikut diperiksa. Hash hanya membuktikan berkas masih sama dengan saat di-hash, bukan
+    keaslian konten platform (PRD bagian 10)."""
+    from . import verification
+
+    labels: dict[str, str] = {
+        VerificationResult.MISMATCH: "hash tidak cocok",
+        VerificationResult.MISSING: "berkas hilang",
+        VerificationResult.UNREADABLE: "jalur tidak sah",
+    }
     problems = []
     for art in EvidenceArtifact.objects.filter(run=run).order_by("relative_path"):
-        try:
-            resolve_inside_evidence(art.relative_path)
-            actual = sha256_of(art.relative_path)
-        except FileNotFoundError:
-            problems.append({"path": art.relative_path, "problem": "berkas hilang"})
-            continue
-        except EvidenceStorageError:
-            problems.append({"path": art.relative_path, "problem": "jalur tidak sah"})
-            continue
-        if actual != art.sha256:
-            problems.append({"path": art.relative_path, "problem": "hash tidak cocok"})
+        inspection = verification.inspect_artifact(art)
+        inspection.close()
+        if inspection.result != VerificationResult.MATCH:
+            problems.append({"path": art.relative_path, "problem": labels[inspection.result]})
     return problems
