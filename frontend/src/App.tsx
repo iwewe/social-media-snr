@@ -1,10 +1,11 @@
-import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
+import { Link, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 
 import { useAuth } from "./auth/context";
 import { InvestigationPage } from "./pages/InvestigationPage";
 import { InvestigationsPage } from "./pages/InvestigationsPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RunPage } from "./pages/RunPage";
+import { UsersPage } from "./pages/UsersPage";
 
 function Layout() {
   const { user, logout } = useAuth();
@@ -18,6 +19,11 @@ function Layout() {
       <header className="topbar">
         <strong>SNR</strong>
         <span>
+          {user.is_superuser && (
+            <>
+              <Link to="/users">Akun</Link>{" "}
+            </>
+          )}
           {user.username}{" "}
           <button type="button" onClick={() => void logout()}>
             Keluar
@@ -39,6 +45,7 @@ export default function App() {
         <Route path="/" element={<InvestigationsPage />} />
         <Route path="/investigations/:id" element={<InvestigationPage />} />
         <Route path="/inspections/:id" element={<RunPage />} />
+        <Route path="/users" element={<UsersPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

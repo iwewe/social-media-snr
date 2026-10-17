@@ -13,6 +13,7 @@ E2E_DATA="$(mktemp -d)"
 SHOTS="$PWD/e2e-shots"
 PASSWORD="$(openssl rand -base64 18 | tr -d '/+=')"
 E2E_USER=e2e_user
+E2E_ADMIN=e2e_admin
 
 set -a
 # shellcheck disable=SC1091
@@ -35,7 +36,7 @@ echo "== menyiapkan database $DB"
 docker compose exec -T postgres psql -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE $DB" >/dev/null
 docker compose run --rm --no-deps -e POSTGRES_DB=$DB web python manage.py migrate --noinput >/dev/null
 docker compose run --rm --no-deps -e POSTGRES_DB=$DB -e E2E_PW="$PASSWORD" web python manage.py shell -c \
-  "import os; from django.contrib.auth.models import User; User.objects.create_user('$E2E_USER', password=os.environ['E2E_PW'])"
+  "import os; from django.contrib.auth.models import User; User.objects.create_user('$E2E_USER', password=os.environ['E2E_PW']); User.objects.create_superuser('$E2E_ADMIN', password=os.environ['E2E_PW'])"
 
 echo "== menjalankan backend dan frontend sementara"
 # Broker terpisah (Valkey DB 1) agar worker dev tidak mengambil tugas E2E (dan sebaliknya); data bukti
@@ -70,12 +71,12 @@ done
 docker logs "$WORKER" 2>&1 | grep -q " ready\." || { echo "worker E2E tidak siap"; docker logs "$WORKER" | tail -20; exit 1; }
 
 echo "== menjalankan skenario browser"
-for flow in workspace_flow inspection_flow; do
+for flow in workspace_flow inspection_flow team_flow; do
   echo "-- $flow"
   docker compose run --rm --no-deps \
     -v "$PWD/tests/e2e:/e2e:ro" -v "$SHOTS:/shots" \
-    -e E2E_BASE_URL="http://$FRONT:5174" -e E2E_USER="$E2E_USER" -e E2E_PASSWORD="$PASSWORD" \
-    -e E2E_SHOTS=/shots \
+    -e E2E_BASE_URL="http://$FRONT:5174" -e E2E_USER="$E2E_USER" -e E2E_ADMIN="$E2E_ADMIN" \
+    -e E2E_PASSWORD="$PASSWORD" -e E2E_SHOTS=/shots \
     worker-browser python "/e2e/$flow.py"
 done
 

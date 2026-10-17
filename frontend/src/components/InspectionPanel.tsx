@@ -5,7 +5,13 @@ import { STATUS_LABELS } from "../inspection/labels";
 import { RunCard } from "./RunCard";
 
 /** Tombol Inspect / Inspect Again dan riwayat run. Run terbaru terbuka; yang lama dilipat. */
-export function InspectionPanel({ inspections }: { inspections: Inspections }) {
+export function InspectionPanel({
+  inspections,
+  readOnly = false,
+}: {
+  inspections: Inspections;
+  readOnly?: boolean;
+}) {
   const { runs, error, starting, inProgress, start, reload } = inspections;
   const first = runs !== null && runs.length === 0;
   const busy = starting || inProgress;
@@ -16,8 +22,14 @@ export function InspectionPanel({ inspections }: { inspections: Inspections }) {
         <button
           type="button"
           onClick={() => void start()}
-          disabled={runs === null || busy}
-          title={busy ? "Masih ada pemeriksaan yang berjalan" : undefined}
+          disabled={readOnly || runs === null || busy}
+          title={
+            readOnly
+              ? "Peran Pembaca tidak dapat menjalankan inspeksi"
+              : busy
+                ? "Masih ada pemeriksaan yang berjalan"
+                : undefined
+          }
         >
           {first ? "Inspect" : "Inspect Again"}
         </button>
@@ -29,6 +41,7 @@ export function InspectionPanel({ inspections }: { inspections: Inspections }) {
           </button>
         )}
       </div>
+      {readOnly && <p className="muted">Peran Pembaca: hanya dapat melihat hasil inspeksi.</p>}
       <ErrorMessage error={error} />
       {runs === null && <p className="muted">Memuat riwayat pemeriksaan...</p>}
       {runs !== null && runs.length === 0 && (

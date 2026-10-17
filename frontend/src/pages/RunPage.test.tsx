@@ -122,4 +122,25 @@ describe("RunPage", () => {
     await screen.findByRole("heading", { name: /Run #/ });
     expect(screen.queryByRole("link", { name: /Lihat respons mentah/ })).toBeNull();
   });
+
+  it.each([
+    ["VIEWER", false],
+    ["MEMBER", true],
+    ["OWNER", true],
+    ["ADMIN", true],
+  ] as const)("peran %s: tombol 'Akui tinjauan' tampil = %s", async (role, shown) => {
+    const review = runDetail({
+      id: 5,
+      my_role: role,
+      status: "REVIEW_REQUIRED",
+      data_state: "needs_review",
+      review: { reasons: ["mixed_source_methods"], outcome: "COMPLETED", acknowledged: null },
+    });
+    mockApi({ [DETAIL]: () => ({ body: review }), [OBS]: () => ({ body: obsPage([]) }) });
+    renderPage();
+    await screen.findByRole("heading", { name: /Run #/ });
+    expect(screen.queryByRole("button", { name: "Akui tinjauan" }) !== null).toBe(shown);
+    if (!shown)
+      expect(screen.getByText(/Hanya Anggota, Pemilik, atau Super admin/)).toBeInTheDocument();
+  });
 });

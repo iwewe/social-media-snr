@@ -14,9 +14,12 @@ import { ErrorMessage } from "./ErrorMessage";
 export function ReviewPanel({
   run,
   onAcknowledged,
+  canAcknowledge = true,
 }: {
   run: RunSummary;
   onAcknowledged: () => void;
+  /** Pembaca tidak dapat mengakui tinjauan (server menegakkan). */
+  canAcknowledge?: boolean;
 }) {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -51,6 +54,17 @@ export function ReviewPanel({
     );
   }
   if (run.status !== "REVIEW_REQUIRED") return null;
+  if (!canAcknowledge) {
+    return (
+      <section aria-label="Tinjauan" className="review">
+        <h3>Tinjauan diperlukan</h3>
+        <p>
+          Hasil run ini perlu ditinjau manusia. Hanya Anggota, Pemilik, atau Super admin yang dapat
+          mengakui tinjauan.
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section aria-label="Tinjauan" className="review">

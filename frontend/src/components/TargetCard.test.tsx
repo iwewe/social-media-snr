@@ -337,3 +337,37 @@ describe("TargetCard: riwayat dan keadaan data", () => {
     expect(screen.getByRole("button", { name: "Inspect Again" })).toBeDisabled();
   });
 });
+
+describe("TargetCard: mode hanya-baca (Pembaca)", () => {
+  it("tanpa tombol revisi catatan, dan Inspect nonaktif dengan alasan", () => {
+    mockApi({});
+    render(<TargetCard target={target()} meta={meta} onChanged={() => {}} readOnly />);
+    expect(screen.queryByRole("button", { name: "Revisi catatan" })).toBeNull();
+    const inspect = screen.getByRole("button", { name: "Inspect" });
+    expect(inspect).toBeDisabled();
+    expect(inspect).toHaveAttribute("title", "Peran Pembaca tidak dapat menjalankan inspeksi");
+    expect(
+      screen.getByText(/Peran Pembaca: hanya dapat melihat hasil inspeksi/),
+    ).toBeInTheDocument();
+  });
+
+  it("tetap menampilkan catatan, riwayat versi, dan hasil inspeksi yang ada", async () => {
+    mockApi({ [LIST]: () => ({ body: [run()] }) });
+    const t = target({
+      latest_inspection: latest(),
+      context: ctx(2, "Revisi"),
+      context_history: [ctx(2, "Revisi"), ctx(1, "Awal")],
+    });
+    render(<TargetCard target={t} meta={meta} onChanged={() => {}} readOnly />);
+    expect(document.querySelector("p.note")!.textContent).toBe("Revisi");
+    expect(screen.getByRole("button", { name: /riwayat versi \(2\)/ })).toBeInTheDocument();
+    expect(await screen.findByText("Pemeriksaan selesai")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Inspect Again" })).toBeDisabled();
+  });
+
+  it("tanpa readOnly (bawaan) revisi catatan tersedia", () => {
+    mockApi({});
+    render(<TargetCard target={target()} meta={meta} onChanged={() => {}} />);
+    expect(screen.getByRole("button", { name: "Revisi catatan" })).toBeInTheDocument();
+  });
+});

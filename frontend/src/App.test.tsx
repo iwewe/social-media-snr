@@ -55,4 +55,30 @@ describe("App (rute dan sesi)", () => {
     expect(screen.getByText("analis")).toBeInTheDocument();
     expect(await screen.findByText(/Belum ada investigasi/)).toBeInTheDocument();
   });
+
+  const respond = (me: object) =>
+    fetchMock.mockImplementation(async (url: string) => {
+      const body = url === "/api/auth/me/" ? me : url === "/api/investigations/" ? [] : {};
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+
+  it("super admin melihat tautan Akun di bilah atas; pengguna biasa tidak", async () => {
+    respond({ username: "admin", is_staff: true, is_superuser: true });
+    const view = renderAt("/");
+    expect(await screen.findByRole("link", { name: "Akun" })).toHaveAttribute("href", "/users");
+    view.unmount();
+    respond({ username: "analis", is_staff: false, is_superuser: false });
+    renderAt("/");
+    await screen.findByRole("heading", { name: "Investigasi" });
+    expect(screen.queryByRole("link", { name: "Akun" })).toBeNull();
+  });
+
+  it("halaman /users menolak pengguna biasa dengan pesan jelas", async () => {
+    respond({ username: "analis", is_staff: false, is_superuser: false });
+    renderAt("/users");
+    expect(await screen.findByRole("alert")).toHaveTextContent("khusus super admin");
+  });
 });

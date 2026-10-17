@@ -1,8 +1,11 @@
 import { vi } from "vitest";
 
 import type {
+  Account,
   Coverage,
+  InvestigationDetail,
   LatestInspection,
+  Member,
   ObservationPage,
   ObservationRow,
   RunArtifact,
@@ -94,7 +97,8 @@ export function mockApi(routes: Record<string, Handler>) {
     const handler = routes[key];
     if (!handler) throw new Error(`rute tidak dimock: ${key}`);
     const { status = 200, body } = handler(init?.body ? JSON.parse(String(init.body)) : undefined);
-    return new Response(JSON.stringify(body), {
+    // Status 204 tidak boleh memiliki badan (Response melempar galat).
+    return new Response(status === 204 ? null : JSON.stringify(body), {
       status,
       headers: { "Content-Type": "application/json" },
     });
@@ -155,6 +159,7 @@ export const artifact = (over: Partial<RunArtifact> = {}): RunArtifact => ({
 
 export const runDetail = (over: Partial<RunDetail> = {}): RunDetail => ({
   ...run(),
+  my_role: "OWNER",
   target: {
     id: 1,
     platform: "x",
@@ -236,5 +241,51 @@ export const runVerification = (over: Partial<RunVerification> = {}): RunVerific
     },
   },
   statement: "Hash tidak membuktikan keaslian konten platform.",
+  ...over,
+});
+
+export const member = (over: Partial<Member> = {}): Member => ({
+  user_id: 1,
+  username: "pemilik",
+  role: "OWNER",
+  since: "2026-10-17T01:00:00Z",
+  added_by: "pemilik",
+  ...over,
+});
+
+export const account = (over: Partial<Account> = {}): Account => ({
+  id: 1,
+  username: "admin",
+  is_active: true,
+  is_superuser: true,
+  last_login: "2026-10-17T02:00:00Z",
+  date_joined: "2026-10-01T00:00:00Z",
+  active_memberships: 0,
+  ...over,
+});
+
+export const detail = (
+  role: InvestigationDetail["my_role"],
+  over: Partial<InvestigationDetail> = {},
+): InvestigationDetail => ({
+  id: 1,
+  name: "Uji tim",
+  description: "",
+  created_at: "2026-10-16T05:00:00Z",
+  created_by: "pemilik",
+  issue_count: 1,
+  target_count: 1,
+  my_role: role,
+  member_count: 2,
+  issues: [
+    {
+      id: 7,
+      title: "Isu uji",
+      created_at: "2026-10-16T05:00:00Z",
+      context: null,
+      propositions: [],
+    },
+  ],
+  targets: [target()],
   ...over,
 });

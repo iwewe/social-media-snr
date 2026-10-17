@@ -5,6 +5,29 @@ export type InitialStance = "PRO" | "CONTRA" | "MIXED" | "UNDETERMINED";
 export interface User {
   username: string;
   is_staff: boolean;
+  is_superuser: boolean;
+}
+
+export type Role = "OWNER" | "MEMBER" | "VIEWER";
+
+/** Anggota aktif sebuah investigasi. */
+export interface Member {
+  user_id: number;
+  username: string;
+  role: Role;
+  since: string;
+  added_by: string;
+}
+
+/** Akun untuk super admin (tanpa hash kata sandi). */
+export interface Account {
+  id: number;
+  username: string;
+  is_active: boolean;
+  is_superuser: boolean;
+  last_login: string | null;
+  date_joined: string;
+  active_memberships: number;
 }
 
 export interface Choice {
@@ -26,6 +49,9 @@ export interface InvestigationSummary {
   created_by: string;
   issue_count: number;
   target_count: number;
+  /** Peran pengguna ini; ADMIN = super admin. */
+  my_role: Role | "ADMIN" | null;
+  member_count: number;
 }
 
 export interface Proposition {
@@ -230,6 +256,7 @@ export interface RunVerification {
 }
 
 export interface RunDetail extends RunSummary {
+  my_role: Role | "ADMIN" | null;
   target: {
     id: number;
     platform: Platform;
