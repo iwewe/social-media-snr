@@ -1,6 +1,6 @@
-# 0024. I2: definisi indikator koordinasi dan skema klasifikasi M2 (DIUSULKAN)
+# 0024. I2: definisi indikator koordinasi dan skema klasifikasi M2
 
-Status: **Diusulkan** - menunggu tinjauan pengguna. Belum ada kode. Dasar: PRD 6.5, 6.7, 11.2, 11.4, 11.5; rencana WP-2.0..2.6.
+Status: **Diterima** (pengguna menyetujui keempat keputusan, 2026-10-18). Belum ada kode. Dasar: PRD 6.5, 6.7, 11.2, 11.4, 11.5; rencana WP-2.0..2.6.
 
 ## Prinsip yang mengikat semua indikator
 
