@@ -10,6 +10,7 @@ import { ObservationTable } from "../components/ObservationTable";
 import { ReviewPanel } from "../components/ReviewPanel";
 import { RunCard } from "../components/RunCard";
 import { ContextHelp } from "../help/ContextHelp";
+import { canWrite } from "../team/roles";
 
 /** Detail satu run: ringkasan, tinjauan, artefak, dan respons mentah. */
 export function RunPage() {
@@ -41,7 +42,7 @@ export function RunPage() {
         Run #{run.sequence} <span className="muted url">{run.target.normalized_url}</span>
       </h1>
       <RunCard run={run} linkToDetail={false} />
-      <ReviewPanel run={run} onAcknowledged={load} />
+      <ReviewPanel run={run} onAcknowledged={load} canAcknowledge={canWrite(run.my_role)} />
       <ArtifactList runId={run.id} artifacts={run.artifacts} preservation={run.preservation} />
       <section aria-label="Respons mentah">
         <h2>

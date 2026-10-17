@@ -18,10 +18,13 @@ export function TargetCard({
   target,
   meta,
   onChanged,
+  readOnly = false,
 }: {
   target: Target;
   meta: Meta;
   onChanged: () => void;
+  /** Pembaca: tanpa revisi catatan dan tanpa inspeksi (server tetap menegakkan). */
+  readOnly?: boolean;
 }) {
   const [revising, setRevising] = useState(false);
   const [note, setNote] = useState(target.context?.note ?? "");
@@ -73,7 +76,7 @@ export function TargetCard({
         </div>
       ))}
 
-      <InspectionPanel inspections={inspections} />
+      <InspectionPanel inspections={inspections} readOnly={readOnly} />
 
       {ctx && (
         <section>
@@ -101,7 +104,7 @@ export function TargetCard({
         </section>
       )}
 
-      {revising ? (
+      {readOnly ? null : revising ? (
         <form onSubmit={revise}>
           <label>
             Revisi catatan (menjadi versi baru) <ContextHelp id="targetNote" />

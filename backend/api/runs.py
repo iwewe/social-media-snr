@@ -18,6 +18,7 @@ from collection.models import (
     PostRelation,
     RunStatus,
 )
+from investigations.access import effective_role
 from preservation.models import ArtifactVerification, EvidenceArtifact
 
 from .messages import (
@@ -154,10 +155,12 @@ def run_repr(run: InspectionRun, *, messages: list[Message] | None = None) -> di
     }
 
 
-def run_detail(run: InspectionRun) -> dict[str, Any]:
+def run_detail(run: InspectionRun, user: Any) -> dict[str, Any]:
     target = run.target
     return {
         **run_repr(run),
+        # Peran pengguna ini pada investigasi run (OWNER/MEMBER/VIEWER/ADMIN): UI menyesuaikan aksi.
+        "my_role": effective_role(user, target.investigation),
         # Cukup untuk judul halaman dan tautan kembali; tanpa catatan konteks target.
         "target": {
             "id": target.pk,

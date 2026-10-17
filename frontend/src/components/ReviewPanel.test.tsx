@@ -91,4 +91,25 @@ describe("ReviewPanel", () => {
     render(<ReviewPanel run={pendingReview()} onAcknowledged={() => {}} />);
     expect(screen.getByLabelText(/Catatan tinjauan/)).toHaveAttribute("maxlength", "2000");
   });
+
+  it("tanpa hak mengakui (Pembaca): penjelasan saja, tanpa formulir", () => {
+    render(<ReviewPanel run={pendingReview()} onAcknowledged={() => {}} canAcknowledge={false} />);
+    expect(
+      screen.getByText(/Hanya Anggota, Pemilik, atau Super admin yang dapat mengakui tinjauan/),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Akui tinjauan" })).toBeNull();
+    expect(screen.queryByLabelText(/Catatan tinjauan/)).toBeNull();
+  });
+
+  it("pengakuan yang sudah tercatat tetap terlihat oleh Pembaca", () => {
+    const r2 = run({
+      review: {
+        reasons: [],
+        outcome: "COMPLETED",
+        acknowledged: { by: "peninjau", at: "2026-10-17T02:00:00Z", note: "aman" },
+      },
+    });
+    render(<ReviewPanel run={r2} onAcknowledged={() => {}} canAcknowledge={false} />);
+    expect(screen.getByText("peninjau")).toBeInTheDocument();
+  });
 });

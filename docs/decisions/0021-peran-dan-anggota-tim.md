@@ -1,6 +1,6 @@
 # 0021 - Peran dan anggota tim per investigasi
 
-- **Status:** diterima (A3a: backend). UI (A3b) menyusul. Keputusan kebijakan di bawah adalah asumsi saya yang perlu Anda tinjau.
+- **Status:** diterima (A3a: backend; UI di ADR 0022). Keputusan kebijakan di bawah adalah asumsi saya yang perlu Anda tinjau.
 - **Tanggal:** 2026-10-17
 
 ## Konteks

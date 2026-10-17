@@ -262,3 +262,9 @@ def test_the_static_check_detects_a_violation() -> None:
     tree = ast.parse("x = get_object_or_404(InspectionRun, pk=1)")
     call = next(n for n in ast.walk(tree) if isinstance(n, ast.Call))
     assert {n.id for n in ast.walk(call.args[0]) if isinstance(n, ast.Name)} & PROTECTED
+
+
+def test_run_detail_reports_the_callers_role_for_the_ui(world) -> None:
+    for who, expected in (("owner", "OWNER"), ("member", "MEMBER"), ("viewer", "VIEWER"), ("admin", "ADMIN")):
+        body = world.clients[who].get(f"/api/inspections/{world.run.pk}/").json()
+        assert body["my_role"] == expected, who

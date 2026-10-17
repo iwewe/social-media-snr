@@ -28,6 +28,10 @@ export const HELP = {
     title: "Melihat respons mentah",
     body: "Daftar ini adalah data mentah yang teramati pada satu pemeriksaan; belum ada klasifikasi, stance, atau skor. Penulis dikenali dari ID akun, bukan dari username atau nama tampilan yang dapat berubah. Kolom Perubahan membandingkan dengan pemeriksaan sebelumnya: objek yang tidak muncul ditandai tidak teramati kali ini, bukan dihapus. Stance terhadap isu dinilai terhadap proposition, dan itu berbeda dari kesepakatan terhadap posting yang dibalas.",
   },
+  teamRoles: {
+    title: "Peran dalam tim",
+    body: "Setiap investigasi punya tim. Pemilik mengelola anggota dan melakukan semua yang dapat dilakukan Anggota. Anggota menulis issue, proposition, target, dan konteks, menjalankan inspeksi, dan mengakui tinjauan. Pembaca hanya membaca, termasuk bukti dan verifikasi hash. Orang yang bukan anggota tidak melihat investigasi itu sama sekali. Super admin melihat semuanya. Mencabut akses tidak menghapus riwayat siapa pernah menjadi anggota.",
+  },
   dataStates: {
     title: "Belum diperiksa, tidak ada data, gagal mengakses",
     body: "Tiga keadaan ini berbeda. Belum diperiksa: target belum pernah dicek, jadi belum ada data. Tidak ada data: pemeriksaan berhasil membaca target dan memang tidak menemukan balasan. Gagal mengakses data: pengambilan ditolak, gagal, atau belum didukung, sehingga TIDAK ada kesimpulan tentang isi target dan ini bukan berarti tidak ada balasan. Pada hasil parsial, objek yang tidak muncul tidak boleh dianggap dihapus.",
@@ -47,6 +51,7 @@ export const REQUIRED_HELP_IDS: readonly HelpId[] = [
   "startInspection",
   "reinspection",
   "dataStates",
+  "teamRoles",
   "viewResponses",
   "uncertaintyLabels",
 ];

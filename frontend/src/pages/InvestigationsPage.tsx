@@ -6,6 +6,7 @@ import { api } from "../api/client";
 import type { InvestigationDetail, InvestigationSummary } from "../api/types";
 import { errorText } from "../api/errorText";
 import { ErrorMessage } from "../components/ErrorMessage";
+import { RoleBadge } from "../components/RoleBadge";
 
 export function InvestigationsPage() {
   const navigate = useNavigate();
@@ -48,15 +49,19 @@ export function InvestigationsPage() {
       <ErrorMessage error={loadError} />
       {items === null && !loadError && <p className="muted">Memuat...</p>}
       {items?.length === 0 && (
-        <p className="muted">Belum ada investigasi. Buat yang pertama di bawah.</p>
+        <p className="muted">
+          Belum ada investigasi yang dapat Anda lihat. Buat yang baru di bawah, atau minta Pemilik
+          investigasi menambahkan Anda ke timnya.
+        </p>
       )}
       <ul className="list">
         {items?.map((i) => (
           <li key={i.id} className="card">
-            <Link to={`/investigations/${i.id}`}>{i.name}</Link>
+            <Link to={`/investigations/${i.id}`}>{i.name}</Link> <RoleBadge role={i.my_role} />
             <span className="muted">
               {" "}
-              - {i.issue_count} issue, {i.target_count} target, oleh {i.created_by}
+              - {i.issue_count} issue, {i.target_count} target, {i.member_count} anggota, oleh{" "}
+              {i.created_by}
             </span>
             {i.description && <p>{i.description}</p>}
           </li>

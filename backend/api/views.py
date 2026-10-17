@@ -241,8 +241,9 @@ class TargetInspectionsView(ApiView):
 
 class InspectionDetailView(ApiView):
     def get(self, request: Request, pk: int) -> Response:
-        run = run_for(_user(request), pk, Role.VIEWER, detail=True)
-        return Response(runs.run_detail(run))
+        user = _user(request)
+        run = run_for(user, pk, Role.VIEWER, detail=True)
+        return Response(runs.run_detail(run, user))
 
 
 class InspectionObservationsView(ApiView):

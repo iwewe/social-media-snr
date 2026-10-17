@@ -58,6 +58,14 @@ describe("teks petunjuk (PRD bagian 12)", () => {
     expect(body).toContain("berbeda dari kesepakatan");
   });
 
+  it("peran tim: tiga peran, non-anggota tidak melihat, riwayat tidak dihapus", () => {
+    const body = HELP.teamRoles.body.toLowerCase();
+    for (const word of ["pemilik", "anggota", "pembaca", "super admin"])
+      expect(body).toContain(word);
+    expect(body).toContain("tidak melihat investigasi itu sama sekali");
+    expect(body).toContain("tidak menghapus riwayat");
+  });
+
   it("label ketidakpastian menjelaskan UNDETERMINED bukan netral", () => {
     const body = HELP.uncertaintyLabels.body;
     expect(body).toContain("UNDETERMINED");

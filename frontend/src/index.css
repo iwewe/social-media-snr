@@ -356,3 +356,22 @@ td code {
   display: block;
   font-weight: 700;
 }
+
+/* tim dan peran (A3b) */
+.badge.role[data-role="ADMIN"],
+.badge.role[data-role="OWNER"] {
+  font-weight: 600;
+}
+.badge.role[data-role="VIEWER"] {
+  color: var(--muted);
+}
+/* hanya pilihan di dalam tabel (peran anggota); select lain tetap selebar kolom */
+td select {
+  width: auto;
+  display: inline-block;
+  margin-top: 0;
+}
+
+.emph {
+  font-weight: 700;
+}
