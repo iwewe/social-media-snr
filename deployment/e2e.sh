@@ -78,3 +78,14 @@ for flow in workspace_flow inspection_flow; do
     -e E2E_SHOTS=/shots \
     worker-browser python "/e2e/$flow.py"
 done
+
+echo "-- tamper_flow (berkas bukti diubah di disk)"
+TARGET_FILE="$(find "$E2E_DATA/evidence" -type f -name 'putaran4.html' | head -1)"
+[ -n "$TARGET_FILE" ] || { echo "berkas DOM bukti tidak ditemukan untuk uji pengubahan"; exit 1; }
+chmod u+w "$TARGET_FILE"
+printf '<!-- diubah -->' >> "$TARGET_FILE"
+docker compose run --rm --no-deps \
+  -v "$PWD/tests/e2e:/e2e:ro" -v "$SHOTS:/shots" \
+  -e E2E_BASE_URL="http://$FRONT:5174" -e E2E_USER="$E2E_USER" -e E2E_PASSWORD="$PASSWORD" \
+  -e E2E_SHOTS=/shots \
+  worker-browser python /e2e/tamper_flow.py

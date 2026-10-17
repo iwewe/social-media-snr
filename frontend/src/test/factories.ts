@@ -8,7 +8,9 @@ import type {
   RunArtifact,
   RunDetail,
   RunSummary,
+  RunVerification,
   Target,
+  Verification,
 } from "../api/types";
 
 export const coverage = (over: Partial<Coverage> = {}): Coverage => ({
@@ -147,6 +149,7 @@ export const artifact = (over: Partial<RunArtifact> = {}): RunArtifact => ({
   content_type: "text/html",
   stored_at: "2026-10-17T01:00:05Z",
   post_id: null,
+  last_verification: null,
   ...over,
 });
 
@@ -160,5 +163,78 @@ export const runDetail = (over: Partial<RunDetail> = {}): RunDetail => ({
     investigation_id: 9,
   },
   artifacts: [],
+  ...over,
+});
+
+const MESSAGES = {
+  MATCH: {
+    code: "verification_match",
+    level: "info",
+    title: "Hash cocok",
+    detail: "Berkas yang tersimpan masih sama dengan saat disimpan.",
+    action: null,
+  },
+  MISMATCH: {
+    code: "verification_mismatch",
+    level: "error",
+    title: "Berkas berbeda dari saat disimpan",
+    detail: "Berkas ini tidak boleh dipakai sebagai bukti sampai penyebabnya dijelaskan.",
+    action: "Laporkan ke administrator.",
+  },
+  MISSING: {
+    code: "verification_missing",
+    level: "error",
+    title: "Berkas bukti tidak ditemukan",
+    detail: "Catatan artefak ada, tetapi berkasnya tidak ada.",
+    action: null,
+  },
+  UNREADABLE: {
+    code: "verification_unreadable",
+    level: "error",
+    title: "Berkas bukti tidak dapat diverifikasi",
+    detail: "Berkas tidak dapat dibaca secara aman.",
+    action: null,
+  },
+} as const;
+
+export const verification = (
+  result: Verification["result"] = "MATCH",
+  over: Partial<Verification> = {},
+): Verification => ({
+  id: 1,
+  artifact_id: 1,
+  result,
+  purpose: "verify",
+  verified_at: "2026-10-17T03:00:00Z",
+  verified_by: "analis",
+  expected_sha256: "a".repeat(64),
+  actual_sha256:
+    result === "MATCH" ? "a".repeat(64) : result === "MISMATCH" ? "b".repeat(64) : null,
+  expected_size_bytes: 2048,
+  actual_size_bytes: result === "MATCH" ? 2048 : null,
+  message: { ...MESSAGES[result] },
+  statement: "Hash tidak membuktikan keaslian konten platform.",
+  ...over,
+});
+
+export const runVerification = (over: Partial<RunVerification> = {}): RunVerification => ({
+  all_match: true,
+  summary: { MATCH: 2 },
+  verifications: [
+    verification("MATCH", { artifact_id: 1 }),
+    verification("MATCH", { artifact_id: 2, id: 2 }),
+  ],
+  manifest: {
+    state: "CONSISTENT",
+    problems: [],
+    message: {
+      code: "manifest_consistent",
+      level: "info",
+      title: "Manifest konsisten",
+      detail: "Daftar artefak di manifest sama dengan catatan.",
+      action: null,
+    },
+  },
+  statement: "Hash tidak membuktikan keaslian konten platform.",
   ...over,
 });

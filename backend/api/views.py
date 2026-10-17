@@ -2,6 +2,7 @@ from typing import Any
 
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import AbstractBaseUser
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
@@ -16,6 +17,10 @@ from investigations import services
 from investigations.enums import InitialStance, Platform, TargetType
 from investigations.errors import InvalidContext
 from investigations.models import CollectionTarget, Investigation, Issue, Proposition
+from preservation import verification
+from preservation.exports import ensure_exportable
+from preservation.models import EvidenceArtifact, VerificationResult
+from preservation.storage import PathNotAllowed, resolve_inside_evidence
 
 from . import presenters, runs
 from .base import ApiView
@@ -245,6 +250,81 @@ class InspectionAcknowledgeView(ApiView):
         data = _valid(AcknowledgeInput, request)
         done = acknowledge_review(run=run, user=_user(request), note=data["note"])
         return Response(runs.run_repr(done))
+
+
+# --- Bukti: verifikasi dan akses (WP-1.10; FR-040) -----------------------------------------
+
+_INLINE_IMAGES = {"image/png", "image/jpeg", "image/webp", "image/gif"}
+_EXTENSIONS = {
+    "image/png": ".png",
+    "image/jpeg": ".jpg",
+    "image/webp": ".webp",
+    "image/gif": ".gif",
+    "text/html": ".html",
+    "application/json": ".json",
+    "text/plain": ".txt",
+}
+
+
+class ArtifactVerifyView(ApiView):
+    """Hitung ulang SHA-256 dan bandingkan dengan catatan. 200 walau hasilnya MISMATCH:
+    pemeriksaan berhasil menghasilkan putusan; putusannya ada di `result`."""
+
+    def post(self, request: Request, pk: int) -> Response:
+        artifact = get_object_or_404(EvidenceArtifact, pk=pk)
+        row = verification.verify_artifact(artifact, _user(request))
+        return Response(runs.verification_repr(row))
+
+
+class InspectionVerifyArtifactsView(ApiView):
+    """Verifikasi semua artefak sebuah run dan konsistensi manifest-nya."""
+
+    def post(self, request: Request, pk: int) -> Response:
+        run = get_object_or_404(InspectionRun, pk=pk)
+        return Response(runs.run_verification_repr(verification.verify_run(run, _user(request))))
+
+
+class ArtifactContentView(ApiView):
+    """Isi artefak, hanya untuk pengguna terautentikasi dan HANYA bila hash cocok.
+
+    Berkas yang tidak lolos verifikasi tidak disajikan (409): menyajikan bukti yang berubah tanpa
+    peringatan lebih berbahaya daripada menolaknya; rinciannya ada di endpoint verifikasi. Berkas
+    dibuka sekali: hash dan aliran memakai deskriptor yang sama. Isi berasal dari platform dan
+    TIDAK DIPERCAYA: selalu diunduh sebagai lampiran kecuali gambar berjenis aman, dengan nosniff
+    dan CSP sandbox, agar tidak pernah dieksekusi pada origin aplikasi."""
+
+    def get(self, request: Request, pk: int) -> Any:
+        artifact = get_object_or_404(EvidenceArtifact, pk=pk)
+        try:
+            ensure_exportable(resolve_inside_evidence(artifact.relative_path))
+        except (PathNotAllowed, FileNotFoundError, OSError):
+            inspection = verification.Inspection(VerificationResult.UNREADABLE)
+        else:
+            inspection = verification.inspect_artifact(artifact)
+        row = verification.record(artifact, _user(request), inspection, "download")
+        if inspection.handle is None:
+            return Response(
+                {
+                    "detail": "Berkas tidak lolos verifikasi hash dan tidak disajikan.",
+                    "code": "artifact_integrity_failed",
+                    "verification": runs.verification_repr(row),
+                },
+                status=409,
+            )
+        content_type = artifact.content_type.split(";")[0].strip().lower()
+        inline = artifact.kind == "screenshot" and content_type in _INLINE_IMAGES
+        extension = _EXTENSIONS.get(content_type, ".bin")
+        response = FileResponse(
+            inspection.handle,
+            as_attachment=not inline,
+            filename=f"snr-{artifact.kind}-{artifact.pk}{extension}",
+            content_type=content_type if inline else "application/octet-stream",
+        )
+        response["X-Content-Type-Options"] = "nosniff"
+        response["Content-Security-Policy"] = "default-src 'none'; sandbox; frame-ancestors 'none'"
+        response["Cache-Control"] = "private, no-store"
+        response["Cross-Origin-Resource-Policy"] = "same-origin"
+        return response
 
 
 def _user(request: Request) -> AbstractBaseUser:
