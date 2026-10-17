@@ -1,4 +1,6 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, render as rtlRender, screen, waitFor, within } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { MemoryRouter } from "react-router-dom";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -31,6 +33,8 @@ const target = (overrides: Partial<Target> = {}): Target =>
     context_history: [ctx(1, "  Catatan\nbaris dua  ")],
     ...overrides,
   });
+
+const render = (ui: ReactElement) => rtlRender(<MemoryRouter>{ui}</MemoryRouter>);
 
 const LIST = "GET /api/targets/1/inspections/";
 const START = "POST /api/targets/1/inspections/";
@@ -305,6 +309,7 @@ describe("TargetCard: riwayat dan keadaan data", () => {
     expect(old).not.toBeNull();
     expect(old.open).toBe(false);
     expect(old.textContent).toContain("Run #1");
+    expect(old.querySelector("summary")!.textContent).toBe("Run #1 - Selesai"); // bukan enum mentah
   });
 
   it("sebelum riwayat dimuat memakai ringkasan dari server", () => {

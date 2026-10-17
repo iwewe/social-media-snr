@@ -1,8 +1,12 @@
-import { render, screen, within } from "@testing-library/react";
+import { render as rtlRender, screen, within } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 
 import { coverage, run } from "../test/factories";
 import { RunCard } from "./RunCard";
+
+const render = (ui: ReactElement) => rtlRender(<MemoryRouter>{ui}</MemoryRouter>);
 
 describe("RunCard", () => {
   it("menampilkan status, keadaan data, dan pesan ramah", () => {
@@ -131,5 +135,50 @@ describe("RunCard", () => {
   it("teks respons dari platform tidak pernah dirender di kartu run", () => {
     const { container } = render(<RunCard run={run()} />);
     expect(container.textContent).not.toMatch(/balasan sintetis/i);
+  });
+
+  it("menautkan ke halaman respons mentah untuk run yang sudah final", () => {
+    render(<RunCard run={run({ id: 42 })} />);
+    expect(screen.getByRole("link", { name: /Lihat respons mentah dan bukti/ })).toHaveAttribute(
+      "href",
+      "/inspections/42",
+    );
+  });
+
+  it("tidak menautkan saat run masih berjalan atau bila diminta tanpa tautan", () => {
+    render(<RunCard run={run({ status: "RUNNING", data_state: "in_progress" })} />);
+    expect(screen.queryByRole("link")).toBeNull();
+    render(<RunCard run={run()} linkToDetail={false} />);
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("run gagal diambil tidak menampilkan '0 teramati' yang bisa dibaca 'tidak ada balasan'", () => {
+    const r = run({
+      status: "UNSUPPORTED",
+      data_state: "access_failed",
+      coverage: coverage({
+        observed_reply_count: 0,
+        observed_object_count: 0,
+        platform_displayed_count: null,
+        pagination_complete: null,
+      }),
+    });
+    const { container } = render(<RunCard run={r} />);
+    expect(container.querySelector('[data-field="observed-replies"]')).toHaveTextContent(
+      "tidak diambil",
+    );
+    expect(container.querySelector('[data-field="observed-objects"]')).toHaveTextContent(
+      "tidak diambil",
+    );
+    expect(container.querySelector('[data-field="observed-replies"]')).not.toHaveTextContent(/^0$/);
+  });
+
+  it("run selesai dengan nol balasan tetap menulis 0 (itu pengamatan yang sah)", () => {
+    const r = run({
+      data_state: "no_data",
+      coverage: coverage({ observed_reply_count: 0, platform_displayed_count: 0 }),
+    });
+    const { container } = render(<RunCard run={r} />);
+    expect(container.querySelector('[data-field="observed-replies"]')).toHaveTextContent(/^0$/);
   });
 });

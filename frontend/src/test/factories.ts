@@ -1,6 +1,15 @@
 import { vi } from "vitest";
 
-import type { Coverage, LatestInspection, RunSummary, Target } from "../api/types";
+import type {
+  Coverage,
+  LatestInspection,
+  ObservationPage,
+  ObservationRow,
+  RunArtifact,
+  RunDetail,
+  RunSummary,
+  Target,
+} from "../api/types";
 
 export const coverage = (over: Partial<Coverage> = {}): Coverage => ({
   scope: ["inspect_post", "inspect_replies"],
@@ -91,3 +100,65 @@ export function mockApi(routes: Record<string, Handler>) {
   vi.stubGlobal("fetch", fetchMock);
   return { calls, fetchMock };
 }
+
+export const row = (over: Partial<ObservationRow> = {}): ObservationRow => ({
+  post_id: 1,
+  external_post_id: "9000000011",
+  identity_status: "VERIFIED",
+  object_type: "reply",
+  reconciliation: "NEW",
+  changed_fields: [],
+  evidence: null,
+  observed_in_this_run: true,
+  last_seen_run_sequence: null,
+  author: {
+    external_actor_id: "a02",
+    handle: "akun_a02",
+    display_name: null,
+    needs_verification: false,
+  },
+  text: "Setuju, kajian publik perlu dilakukan.",
+  published_at: "2026-10-15T08:10:00Z",
+  observed_at: "2026-10-16T01:00:00Z",
+  parent_external_post_id: "9000000001",
+  parent_unknown: false,
+  collection_status: "COMPLETED",
+  artifact_ids: [],
+  ...over,
+});
+
+export const obsPage = (
+  rows: ObservationRow[],
+  over: Partial<ObservationPage> = {},
+): ObservationPage => ({
+  count: rows.length,
+  page: 1,
+  page_size: 25,
+  reconciled: true,
+  results: rows,
+  ...over,
+});
+
+export const artifact = (over: Partial<RunArtifact> = {}): RunArtifact => ({
+  id: 1,
+  kind: "dom_snapshot",
+  sha256: "a".repeat(64),
+  size_bytes: 2048,
+  content_type: "text/html",
+  stored_at: "2026-10-17T01:00:05Z",
+  post_id: null,
+  ...over,
+});
+
+export const runDetail = (over: Partial<RunDetail> = {}): RunDetail => ({
+  ...run(),
+  target: {
+    id: 1,
+    platform: "x",
+    target_type: "post",
+    normalized_url: "https://x.com/u/status/1",
+    investigation_id: 9,
+  },
+  artifacts: [],
+  ...over,
+});

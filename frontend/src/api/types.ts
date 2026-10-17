@@ -184,3 +184,61 @@ export interface StanceInput {
   proposition: number;
   stance: InitialStance;
 }
+
+export interface RunArtifact {
+  id: number;
+  kind: string;
+  sha256: string;
+  size_bytes: number;
+  content_type: string;
+  stored_at: string | null;
+  post_id: number | null;
+}
+
+export interface RunDetail extends RunSummary {
+  target: {
+    id: number;
+    platform: Platform;
+    target_type: TargetType;
+    normalized_url: string;
+    investigation_id: number;
+  };
+  artifacts: RunArtifact[];
+}
+
+export type ReconciliationStatus =
+  "NEW" | "UNCHANGED" | "MODIFIED" | "NOT_OBSERVED" | "CONFIRMED_UNAVAILABLE";
+
+/** Satu respons mentah pada satu run (belum diklasifikasi). null = tidak diketahui. */
+export interface ObservationRow {
+  post_id: number;
+  external_post_id: string | null;
+  identity_status: string;
+  object_type: string;
+  reconciliation: ReconciliationStatus | null;
+  changed_fields: string[];
+  evidence: string | null;
+  observed_in_this_run: boolean;
+  last_seen_run_sequence: number | null;
+  author: {
+    external_actor_id: string | null;
+    handle: string | null;
+    display_name: string | null;
+    needs_verification: boolean;
+  };
+  text: string | null;
+  published_at: string | null;
+  observed_at: string | null;
+  parent_external_post_id: string | null;
+  parent_unknown: boolean;
+  collection_status: string;
+  artifact_ids: number[];
+}
+
+export interface ObservationPage {
+  count: number;
+  page: number;
+  page_size: number;
+  reconciled: boolean;
+  results: ObservationRow[];
+}

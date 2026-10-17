@@ -8,6 +8,8 @@ cd "$(dirname "$0")/.."
 DB=snr_e2e
 WEB=snr-e2e-web
 FRONT=snr-e2e-front
+WORKER=snr-e2e-worker
+E2E_DATA="$(mktemp -d)"
 SHOTS="$PWD/e2e-shots"
 PASSWORD="$(openssl rand -base64 18 | tr -d '/+=')"
 E2E_USER=e2e_user
@@ -18,7 +20,8 @@ set -a
 set +a
 
 cleanup() {
-  docker rm -f "$WEB" "$FRONT" >/dev/null 2>&1 || true
+  docker rm -f "$WEB" "$FRONT" "$WORKER" >/dev/null 2>&1 || true
+  rm -rf "$E2E_DATA"
   docker compose exec -T postgres psql -U "$POSTGRES_USER" -d postgres \
     -c "DROP DATABASE IF EXISTS $DB WITH (FORCE)" >/dev/null 2>&1 || true
   echo "dibersihkan: container sementara dan database $DB"
@@ -35,9 +38,17 @@ docker compose run --rm --no-deps -e POSTGRES_DB=$DB -e E2E_PW="$PASSWORD" web p
   "import os; from django.contrib.auth.models import User; User.objects.create_user('$E2E_USER', password=os.environ['E2E_PW'])"
 
 echo "== menjalankan backend dan frontend sementara"
-docker compose run -d --no-deps --name "$WEB" -e POSTGRES_DB=$DB \
+# Broker terpisah (Valkey DB 1) agar worker dev tidak mengambil tugas E2E (dan sebaliknya); data bukti
+# E2E di direktori sementara, bukan di evidence dev. Adapter dataset memakai datasets/sample.
+mkdir -p "$E2E_DATA/evidence" "$E2E_DATA/browser-profiles"
+chmod 700 "$E2E_DATA/browser-profiles"
+E2E_ENV=(-e POSTGRES_DB=$DB -e CELERY_BROKER_URL=redis://valkey:6379/1
+  -e SNR_DATA_ROOT=/e2edata -e SNR_FIXTURE_DATASETS_DIR=/datasets/sample -v "$E2E_DATA:/e2edata")
+docker compose run -d --no-deps --name "$WEB" "${E2E_ENV[@]}" \
   -e DJANGO_ALLOWED_HOSTS="$FRONT,localhost" \
   web python manage.py runserver 0.0.0.0:8001 >/dev/null
+docker compose run -d --no-deps --name "$WORKER" "${E2E_ENV[@]}" \
+  web celery -A config worker -Q analysis,celery -c 1 -l info >/dev/null
 docker compose run -d --no-deps --name "$FRONT" \
   -e VITE_API_PROXY="http://$WEB:8001" -e VITE_ALLOWED_HOSTS="$FRONT" \
   frontend npm run dev -- --host 0.0.0.0 --port 5174 >/dev/null
@@ -51,9 +62,19 @@ for _ in $(seq 1 60); do
   sleep 2
 done
 
+echo "== menunggu worker siap"
+for _ in $(seq 1 60); do
+  if docker logs "$WORKER" 2>&1 | grep -q " ready\."; then break; fi
+  sleep 1
+done
+docker logs "$WORKER" 2>&1 | grep -q " ready\." || { echo "worker E2E tidak siap"; docker logs "$WORKER" | tail -20; exit 1; }
+
 echo "== menjalankan skenario browser"
-docker compose run --rm --no-deps \
-  -v "$PWD/tests/e2e:/e2e:ro" -v "$SHOTS:/shots" \
-  -e E2E_BASE_URL="http://$FRONT:5174" -e E2E_USER="$E2E_USER" -e E2E_PASSWORD="$PASSWORD" \
-  -e E2E_SHOTS=/shots \
-  worker-browser python /e2e/workspace_flow.py
+for flow in workspace_flow inspection_flow; do
+  echo "-- $flow"
+  docker compose run --rm --no-deps \
+    -v "$PWD/tests/e2e:/e2e:ro" -v "$SHOTS:/shots" \
+    -e E2E_BASE_URL="http://$FRONT:5174" -e E2E_USER="$E2E_USER" -e E2E_PASSWORD="$PASSWORD" \
+    -e E2E_SHOTS=/shots \
+    worker-browser python "/e2e/$flow.py"
+done

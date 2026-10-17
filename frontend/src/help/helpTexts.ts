@@ -24,6 +24,10 @@ export const HELP = {
     title: "Inspeksi ulang",
     body: "Inspeksi ulang membuat pemeriksaan baru atas target yang sama; targetnya tidak dibuat ulang. Objek lama tidak digandakan, objek baru ditambahkan, dan perubahan ditinjau berdasarkan data baru. Objek yang tidak muncul pada satu pemeriksaan tidak dianggap terhapus.",
   },
+  viewResponses: {
+    title: "Melihat respons mentah",
+    body: "Daftar ini adalah data mentah yang teramati pada satu pemeriksaan; belum ada klasifikasi, stance, atau skor. Penulis dikenali dari ID akun, bukan dari username atau nama tampilan yang dapat berubah. Kolom Perubahan membandingkan dengan pemeriksaan sebelumnya: objek yang tidak muncul ditandai tidak teramati kali ini, bukan dihapus. Stance terhadap isu dinilai terhadap proposition, dan itu berbeda dari kesepakatan terhadap posting yang dibalas.",
+  },
   dataStates: {
     title: "Belum diperiksa, tidak ada data, gagal mengakses",
     body: "Tiga keadaan ini berbeda. Belum diperiksa: target belum pernah dicek, jadi belum ada data. Tidak ada data: pemeriksaan berhasil membaca target dan memang tidak menemukan balasan. Gagal mengakses data: pengambilan ditolak, gagal, atau belum didukung, sehingga TIDAK ada kesimpulan tentang isi target dan ini bukan berarti tidak ada balasan. Pada hasil parsial, objek yang tidak muncul tidak boleh dianggap dihapus.",
@@ -43,5 +47,6 @@ export const REQUIRED_HELP_IDS: readonly HelpId[] = [
   "startInspection",
   "reinspection",
   "dataStates",
+  "viewResponses",
   "uncertaintyLabels",
 ];

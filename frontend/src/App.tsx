@@ -4,6 +4,7 @@ import { useAuth } from "./auth/context";
 import { InvestigationPage } from "./pages/InvestigationPage";
 import { InvestigationsPage } from "./pages/InvestigationsPage";
 import { LoginPage } from "./pages/LoginPage";
+import { RunPage } from "./pages/RunPage";
 
 function Layout() {
   const { user, logout } = useAuth();
@@ -37,6 +38,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route path="/" element={<InvestigationsPage />} />
         <Route path="/investigations/:id" element={<InvestigationPage />} />
+        <Route path="/inspections/:id" element={<RunPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
