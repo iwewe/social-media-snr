@@ -1,6 +1,8 @@
 from .registry import AdapterRegistry, AdapterRegistryError, registry
 from .service import (
     ExecutionResult,
+    InspectionInProgress,
+    NotAwaitingReview,
     OrchestrationError,
     acknowledge_review,
     request_inspection,
@@ -16,6 +18,8 @@ __all__ = [
     "AdapterRegistry",
     "AdapterRegistryError",
     "ExecutionResult",
+    "InspectionInProgress",
+    "NotAwaitingReview",
     "OrchestrationError",
     "acknowledge_review",
     "can_transition",

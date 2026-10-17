@@ -10,6 +10,9 @@ from investigations.models import (
     TargetContextVersion,
 )
 
+from .messages import CONTEXT_INSUFFICIENT
+from .runs import latest_inspection_summary
+
 
 def user_repr(user: Any) -> dict[str, Any]:
     return {"username": user.get_username(), "is_staff": bool(user.is_staff)}
@@ -56,6 +59,14 @@ def context_version_repr(v: TargetContextVersion) -> dict[str, Any]:
     }
 
 
+def _target_notices(versions: list[TargetContextVersion]) -> list[dict[str, Any]]:
+    """Konteks belum cukup (FR-095): catatan kosong dan tanpa posisi awal."""
+    latest = versions[0] if versions else None
+    if latest is None or (not latest.note.strip() and not latest.stances.exists()):
+        return [CONTEXT_INSUFFICIENT.to_dict()]
+    return []
+
+
 def target_repr(t: CollectionTarget) -> dict[str, Any]:
     versions = list(t.context_versions.select_related("created_by").order_by("-version"))
     return {
@@ -67,8 +78,9 @@ def target_repr(t: CollectionTarget) -> dict[str, Any]:
         "created_at": t.created_at.isoformat(),
         "context": context_version_repr(versions[0]) if versions else None,
         "context_history": [context_version_repr(v) for v in versions],
-        # InspectionRun belum ada (WP-1.2). null berarti "belum pernah diperiksa", bukan "kosong".
-        "latest_inspection": None,
+        # null berarti "belum pernah diperiksa", bukan "kosong" (NFR-08).
+        "latest_inspection": latest_inspection_summary(t),
+        "notices": _target_notices(versions),
     }
 
 
