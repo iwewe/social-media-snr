@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "name": "tiktok-komentar-impor",
+  "platform": "tiktok",
+  "target_url": "https://www.tiktok.com/@contoh_redaksi/video/7000000000001",
+  "source_method": "imported_dataset",
+  "snapshots": [
+    {
+      "observed_at": "2026-10-16T03:00:00Z",
+      "outcome": "COMPLETED",
+      "pagination_complete": true,
+      "displayed_count": 3,
+      "observations": [
+        {
+          "type": "post",
+          "id": "7000000000001",
+          "actor": "t01",
+          "parent": null,
+          "text": "Video sintetis untuk uji impor.",
+          "published_at": "2026-10-15T10:00:00Z",
+          "handle": "contoh_redaksi"
+        },
+        {
+          "type": "comment",
+          "id": "7100000001",
+          "actor": "t02",
+          "parent": "7000000000001",
+          "text": "Keren!",
+          "published_at": "2026-10-15T10:05:00Z",
+          "handle": "akun_a02"
+        },
+        {
+          "type": "comment",
+          "id": "7100000002",
+          "actor": "t03",
+          "parent": "7000000000001",
+          "text": "Kurang setuju.",
+          "published_at": "2026-10-15T10:06:00Z",
+          "handle": "akun_a03"
+        },
+        {
+          "type": "comment",
+          "id": "7100000003",
+          "actor": "t04",
+          "parent": "7100000002",
+          "text": "Kenapa kurang setuju?",
+          "published_at": "2026-10-15T10:07:00Z",
+          "handle": "akun_a04"
+        }
+      ]
+    }
+  ]
+}

@@ -227,6 +227,7 @@ def _call_adapter(run: InspectionRun) -> InspectionResult:
         target_type=info.target_type,
         requested=tuple(Capability(c) for c in run.requested),
         target_external_id=info.external_id,
+        run_sequence=run.sequence,
     )
     try:
         return adapter.inspect(request)
