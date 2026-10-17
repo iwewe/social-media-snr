@@ -65,6 +65,14 @@ class OrchestrationError(Exception):
     """Pelanggaran aturan orkestrasi (mis. meninjau run yang tidak memerlukan tinjauan)."""
 
 
+class InspectionInProgress(OrchestrationError):
+    """Target masih memiliki run yang menunggu/berjalan (permintaan eksklusif ditolak)."""
+
+
+class NotAwaitingReview(OrchestrationError):
+    """Run tidak sedang menunggu tinjauan."""
+
+
 @dataclass(frozen=True)
 class ExecutionResult:
     run_id: int
@@ -90,16 +98,28 @@ def request_inspection(
     user: AbstractBaseUser,
     requested: list[Capability | str] | None = None,
     enqueue: bool = True,
+    exclusive: bool = False,
 ) -> InspectionRun:
     """Buat run baru untuk TARGET yang sama dan kirim ke antrean adapternya.
 
     Pemeriksaan ulang menambah run, bukan target baru (alur B, AT-01). Pengiriman memakai
-    `transaction.on_commit` agar pekerja tidak melihat run sebelum tersimpan."""
+    `transaction.on_commit` agar pekerja tidak melihat run sebelum tersimpan.
+
+    `exclusive=True` (dipakai API): ditolak bila target masih punya run PENDING/RUNNING. Pemeriksaan
+    dan pembuatan run terjadi di bawah kunci target yang sama, jadi klik ganda tidak lolos."""
     scope = requested or _DEFAULT_SCOPE[TargetType(target.target_type)]
-    run = services.create_inspection_run(target=target, user=user, requested=scope)
-    if enqueue:
-        queue = _queue_for(target.platform)
-        transaction.on_commit(lambda: _enqueue_or_fail(run.pk, queue))
+    with transaction.atomic():
+        if exclusive:
+            CollectionTarget.objects.select_for_update().get(pk=target.pk)
+            busy = InspectionRun.objects.filter(
+                target=target, status__in=[RunStatus.PENDING, RunStatus.RUNNING]
+            ).exists()
+            if busy:
+                raise InspectionInProgress("Target ini masih memiliki pemeriksaan yang berjalan.")
+        run = services.create_inspection_run(target=target, user=user, requested=scope)
+        if enqueue:
+            queue = _queue_for(target.platform)
+            transaction.on_commit(lambda: _enqueue_or_fail(run.pk, queue))
     return run
 
 
@@ -378,7 +398,7 @@ def acknowledge_review(
     Tidak mengubah data run; hanya mencatat siapa, kapan, dan catatan peninjau."""
     run.refresh_from_db()
     if run.status != RunStatus.REVIEW_REQUIRED or not run.review:
-        raise OrchestrationError("Run ini tidak sedang menunggu tinjauan.")
+        raise NotAwaitingReview("Run ini tidak sedang menunggu tinjauan.")
     outcome = RunStatus(run.review["outcome"])
     if outcome not in OUTCOME_STATUSES or not can_transition(RunStatus.REVIEW_REQUIRED, outcome):
         raise OrchestrationError("Hasil tercatat tidak sah untuk diakui.")
@@ -392,6 +412,6 @@ def acknowledge_review(
         status=outcome, review=review
     )
     if updated != 1:
-        raise OrchestrationError("Status run berubah saat diakui.")
+        raise NotAwaitingReview("Status run berubah saat diakui.")
     run.refresh_from_db()
     return run

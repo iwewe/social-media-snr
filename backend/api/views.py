@@ -10,18 +10,23 @@ from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from collection.models import InspectionRun
+from collection.orchestrator import acknowledge_review, request_inspection
 from investigations import services
 from investigations.enums import InitialStance, Platform, TargetType
 from investigations.errors import InvalidContext
 from investigations.models import CollectionTarget, Investigation, Issue, Proposition
 
-from . import presenters
+from . import presenters, runs
 from .base import ApiView
 from .lockout import lockout_response
 from .serializers import (
+    AcknowledgeInput,
     ContextRevisionInput,
+    InspectionInput,
     InvestigationInput,
     IssueInput,
+    PageInput,
     PropositionInput,
     TargetInput,
 )
@@ -182,6 +187,64 @@ class TargetContextReviseView(ApiView):
             target=target, user=_user(request), note=data["note"], stances=_stances(data)
         )
         return Response(presenters.target_repr(target), status=201)
+
+
+# --- Inspeksi (WP-1.9a) ---------------------------------------------------------------------
+
+
+class TargetInspectionsView(ApiView):
+    """GET: riwayat run (terbaru dulu). POST: "Inspect" / "Inspect Again" = run BARU pada target
+    yang sama (AT-01); ditolak 409 bila masih ada run yang berjalan."""
+
+    def get(self, request: Request, pk: int) -> Response:
+        target = get_object_or_404(CollectionTarget, pk=pk)
+        history = (
+            InspectionRun.objects.filter(target=target)
+            .select_related("requested_by")
+            .order_by("-sequence")
+        )
+        return Response([runs.run_repr(r) for r in history])
+
+    def post(self, request: Request, pk: int) -> Response:
+        target = get_object_or_404(CollectionTarget, pk=pk)
+        data = _valid(InspectionInput, request)
+        run = request_inspection(
+            target=target, user=_user(request), requested=data.get("requested"), exclusive=True
+        )
+        # 202: run dibuat dan dikirim ke antrean; hasilnya diketahui lewat polling.
+        return Response(runs.run_repr(run), status=202)
+
+
+class InspectionDetailView(ApiView):
+    def get(self, request: Request, pk: int) -> Response:
+        run = get_object_or_404(
+            InspectionRun.objects.select_related("requested_by", "target"), pk=pk
+        )
+        return Response(runs.run_detail(run))
+
+
+class InspectionObservationsView(ApiView):
+    """Respons mentah per run (belum ada klasifikasi). Berhalaman."""
+
+    def get(self, request: Request, pk: int) -> Response:
+        run = get_object_or_404(InspectionRun, pk=pk)
+        query = PageInput(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        return Response(
+            runs.observation_page(
+                run, page=query.validated_data["page"], page_size=query.validated_data["page_size"]
+            )
+        )
+
+
+class InspectionAcknowledgeView(ApiView):
+    """Akui tinjauan: hasil adapter yang tercatat dipulihkan; tidak mengubah data run."""
+
+    def post(self, request: Request, pk: int) -> Response:
+        run = get_object_or_404(InspectionRun.objects.select_related("requested_by"), pk=pk)
+        data = _valid(AcknowledgeInput, request)
+        done = acknowledge_review(run=run, user=_user(request), note=data["note"])
+        return Response(runs.run_repr(done))
 
 
 def _user(request: Request) -> AbstractBaseUser:

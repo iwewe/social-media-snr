@@ -22,6 +22,22 @@ urlpatterns = [
         name="proposition-create",
     ),
     path(
+        "targets/<int:pk>/inspections/",
+        views.TargetInspectionsView.as_view(),
+        name="target-inspections",
+    ),
+    path("inspections/<int:pk>/", views.InspectionDetailView.as_view(), name="inspection"),
+    path(
+        "inspections/<int:pk>/observations/",
+        views.InspectionObservationsView.as_view(),
+        name="inspection-observations",
+    ),
+    path(
+        "inspections/<int:pk>/acknowledge-review/",
+        views.InspectionAcknowledgeView.as_view(),
+        name="inspection-acknowledge",
+    ),
+    path(
         "targets/<int:pk>/context-versions/",
         views.TargetContextReviseView.as_view(),
         name="target-context",
