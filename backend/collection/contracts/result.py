@@ -50,6 +50,9 @@ class InspectionRequest:
     requested: tuple[Capability, ...]
     target_external_id: str | None = None
     max_items: int | None = None
+    # Urutan run pada target (1, 2, ...). Hanya adapter dataset yang memakainya, untuk memutar
+    # snapshot ke-N secara deterministik; adapter platform tidak boleh bergantung padanya.
+    run_sequence: int | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "requested", _tuple(self.requested))
@@ -61,6 +64,8 @@ class InspectionRequest:
             raise ContractViolation("Kemampuan yang diminta tidak boleh ganda.")
         if self.max_items is not None and self.max_items <= 0:
             raise ContractViolation("max_items harus positif atau None.")
+        if self.run_sequence is not None and self.run_sequence < 1:
+            raise ContractViolation("run_sequence harus >= 1 atau None.")
 
 
 @dataclass(frozen=True)

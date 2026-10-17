@@ -167,4 +167,10 @@ SNR_INSPECTION_SOFT_TIME_LIMIT = (
     else None
 )
 # Adapter yang dimuat saat startup: daftar jalur titik ke kelas tanpa argumen, dipisah koma.
+# Direktori dataset uji/impor (WP-1.7). Kosong = adapter dataset tidak terdaftar sama sekali.
+SNR_FIXTURE_DATASETS_DIR = (
+    Path(os.environ["SNR_FIXTURE_DATASETS_DIR"])
+    if os.environ.get("SNR_FIXTURE_DATASETS_DIR")
+    else None
+)
 SNR_ADAPTERS = [a for a in os.environ.get("SNR_ADAPTERS", "").split(",") if a]

@@ -61,6 +61,7 @@ services:
       - ./backend:/app
       - ./tests:/tests
       - ./compose.yaml:/compose.yaml:ro  # dibaca tes isolasi
+      - ./datasets:/datasets:ro  # dataset uji/impor (WP-1.7); dibaca tes dan adapter dataset
       - ${SNR_HOST_DATA:-./snr-data}/evidence:/srv/snr/evidence
       - ${SNR_HOST_DATA:-./snr-data}/exports:/srv/snr/exports
     healthcheck:
@@ -79,6 +80,7 @@ services:
     command: celery -A config worker -Q analysis,celery -l info
     volumes:
       - ./backend:/app
+      - ./datasets:/datasets:ro
       - ${SNR_HOST_DATA:-./snr-data}/evidence:/srv/snr/evidence
 
   # Hanya worker ini yang melihat browser-profiles (PRD bagian 10: sesi browser terpisah dari bukti).

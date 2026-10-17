@@ -1,0 +1,311 @@
+{
+  "schema_version": 1,
+  "name": "percakapan-4-putaran",
+  "platform": "x",
+  "target_url": "https://x.com/contoh_redaksi/status/9000000001",
+  "source_method": "synthetic_fixture",
+  "snapshots": [
+    {
+      "observed_at": "2026-10-16T01:00:00Z",
+      "outcome": "COMPLETED",
+      "pagination_complete": true,
+      "displayed_count": 4,
+      "observations": [
+        {
+          "type": "post",
+          "id": "9000000001",
+          "actor": "a01",
+          "parent": null,
+          "text": "Kebijakan baru ini perlu dikaji ulang secara terbuka.",
+          "published_at": "2026-10-15T08:00:00Z",
+          "handle": "contoh_redaksi",
+          "display_name": "Akun A01"
+        },
+        {
+          "type": "reply",
+          "id": "9000000011",
+          "actor": "a02",
+          "parent": "9000000001",
+          "text": "Setuju, kajian publik perlu dilakukan.",
+          "published_at": "2026-10-15T08:10:00Z",
+          "handle": "akun_a02",
+          "display_name": "Akun A02"
+        },
+        {
+          "type": "reply",
+          "id": "9000000012",
+          "actor": "a03",
+          "parent": "9000000001",
+          "text": "Kebijakannya sudah tepat, tidak perlu dikaji lagi.",
+          "published_at": "2026-10-15T08:20:00Z",
+          "handle": "akun_a03",
+          "display_name": "Akun A03"
+        },
+        {
+          "type": "reply",
+          "id": "9000000013",
+          "actor": "a04",
+          "parent": "9000000011",
+          "text": "Setuju juga, data harus dibuka.",
+          "published_at": "2026-10-15T08:30:00Z",
+          "handle": "akun_a04",
+          "display_name": "Akun A04"
+        },
+        {
+          "type": "reply",
+          "id": "9000000014",
+          "actor": "a05",
+          "parent": "9000000001",
+          "text": "Komentar ini nanti dihapus penulisnya.",
+          "published_at": "2026-10-15T08:40:00Z",
+          "handle": "akun_a05",
+          "display_name": "Akun A05"
+        }
+      ]
+    },
+    {
+      "observed_at": "2026-10-17T01:00:00Z",
+      "outcome": "COMPLETED",
+      "pagination_complete": true,
+      "displayed_count": 6,
+      "observations": [
+        {
+          "type": "post",
+          "id": "9000000001",
+          "actor": "a01",
+          "parent": null,
+          "text": "Kebijakan baru ini perlu dikaji ulang secara terbuka.",
+          "published_at": "2026-10-15T08:00:00Z",
+          "handle": "contoh_redaksi",
+          "display_name": "Akun A01"
+        },
+        {
+          "type": "reply",
+          "id": "9000000011",
+          "actor": "a02",
+          "parent": "9000000001",
+          "text": "Setuju, kajian publik perlu dilakukan.",
+          "published_at": "2026-10-15T08:10:00Z",
+          "handle": "akun_a02",
+          "display_name": "Akun A02"
+        },
+        {
+          "type": "reply",
+          "id": "9000000012",
+          "actor": "a03",
+          "parent": "9000000001",
+          "text": "Kebijakannya sudah tepat. (diedit: menambah rujukan)",
+          "published_at": "2026-10-15T08:20:00Z",
+          "handle": "akun_a03",
+          "display_name": "Akun A03"
+        },
+        {
+          "type": "reply",
+          "id": "9000000013",
+          "actor": "a04",
+          "parent": "9000000011",
+          "text": "Setuju juga, data harus dibuka.",
+          "published_at": "2026-10-15T08:30:00Z",
+          "handle": "akun_a04",
+          "display_name": "Akun A04"
+        },
+        {
+          "type": "reply",
+          "id": "9000000014",
+          "actor": "a05",
+          "parent": "9000000001",
+          "text": "Komentar ini nanti dihapus penulisnya.",
+          "published_at": "2026-10-15T08:40:00Z",
+          "handle": "akun_a05",
+          "display_name": "Akun A05"
+        },
+        {
+          "type": "reply",
+          "id": "9000000015",
+          "actor": "a06",
+          "parent": "9000000013",
+          "text": "Tolong sertakan sumber datanya.",
+          "published_at": "2026-10-16T09:00:00Z",
+          "handle": "akun_a06",
+          "display_name": "Akun A06"
+        },
+        {
+          "type": "reply",
+          "id": "9000000016",
+          "actor": "a02",
+          "parent": "9000000012",
+          "text": "Alasannya apa, ya?",
+          "published_at": "2026-10-16T09:05:00Z",
+          "handle": "akun_a02",
+          "display_name": "Akun A02"
+        }
+      ]
+    },
+    {
+      "observed_at": "2026-10-18T01:00:00Z",
+      "outcome": "PARTIAL",
+      "pagination_complete": false,
+      "displayed_count": 6,
+      "observations": [
+        {
+          "type": "post",
+          "id": "9000000001",
+          "actor": "a01",
+          "parent": null,
+          "text": "Kebijakan baru ini perlu dikaji ulang secara terbuka.",
+          "published_at": "2026-10-15T08:00:00Z",
+          "handle": "contoh_redaksi",
+          "display_name": "Akun A01"
+        },
+        {
+          "type": "reply",
+          "id": "9000000011",
+          "actor": "a02",
+          "parent": "9000000001",
+          "text": "Setuju, kajian publik perlu dilakukan.",
+          "published_at": "2026-10-15T08:10:00Z",
+          "handle": "akun_a02",
+          "display_name": "Akun A02"
+        },
+        {
+          "type": "reply",
+          "id": "9000000012",
+          "actor": "a03",
+          "parent": "9000000001",
+          "text": "Kebijakannya sudah tepat. (diedit: menambah rujukan)",
+          "published_at": "2026-10-15T08:20:00Z",
+          "handle": "akun_a03",
+          "display_name": "Akun A03"
+        },
+        {
+          "type": "reply",
+          "id": "9000000013",
+          "actor": "a04",
+          "parent": "9000000011",
+          "text": "Setuju juga, data harus dibuka.",
+          "published_at": "2026-10-15T08:30:00Z",
+          "handle": "akun_a04",
+          "display_name": "Akun A04"
+        },
+        {
+          "type": "reply",
+          "id": "9000000015",
+          "actor": "a06",
+          "parent": "9000000013",
+          "text": "Tolong sertakan sumber datanya.",
+          "published_at": "2026-10-16T09:00:00Z",
+          "handle": "akun_a06",
+          "display_name": "Akun A06"
+        },
+        {
+          "type": "reply",
+          "id": "9000000016",
+          "actor": "a02",
+          "parent": "9000000012",
+          "text": "Alasannya apa, ya?",
+          "published_at": "2026-10-16T09:05:00Z",
+          "handle": "akun_a02",
+          "display_name": "Akun A02"
+        }
+      ],
+      "limitations": [
+        {
+          "code": "PAGINATION_INCOMPLETE",
+          "message": "Halaman berikutnya tidak termuat; komentar 9000000014 tidak tampil."
+        }
+      ]
+    },
+    {
+      "observed_at": "2026-10-19T01:00:00Z",
+      "outcome": "COMPLETED",
+      "pagination_complete": true,
+      "displayed_count": 6,
+      "observations": [
+        {
+          "type": "post",
+          "id": "9000000001",
+          "actor": "a01",
+          "parent": null,
+          "text": "Kebijakan baru ini perlu dikaji ulang secara terbuka.",
+          "published_at": "2026-10-15T08:00:00Z",
+          "handle": "contoh_redaksi",
+          "display_name": "Akun A01"
+        },
+        {
+          "type": "reply",
+          "id": "9000000011",
+          "actor": "a02",
+          "parent": "9000000001",
+          "text": "Setuju, kajian publik perlu dilakukan.",
+          "published_at": "2026-10-15T08:10:00Z",
+          "handle": "akun_a02",
+          "display_name": "Akun A02"
+        },
+        {
+          "type": "reply",
+          "id": "9000000012",
+          "actor": "a03",
+          "parent": "9000000001",
+          "text": "Kebijakannya sudah tepat. (diedit: menambah rujukan)",
+          "published_at": "2026-10-15T08:20:00Z",
+          "handle": "akun_a03",
+          "display_name": "Akun A03"
+        },
+        {
+          "type": "reply",
+          "id": "9000000013",
+          "actor": "a04",
+          "parent": "9000000011",
+          "text": "Setuju juga, data harus dibuka.",
+          "published_at": "2026-10-15T08:30:00Z",
+          "handle": "akun_a04",
+          "display_name": "Akun A04"
+        },
+        {
+          "type": "reply",
+          "id": "9000000015",
+          "actor": "a06",
+          "parent": "9000000013",
+          "text": "Tolong sertakan sumber datanya.",
+          "published_at": "2026-10-16T09:00:00Z",
+          "handle": "akun_a06",
+          "display_name": "Akun A06"
+        },
+        {
+          "type": "reply",
+          "id": "9000000016",
+          "actor": "a02",
+          "parent": "9000000012",
+          "text": "Alasannya apa, ya?",
+          "published_at": "2026-10-16T09:05:00Z",
+          "handle": "akun_a02",
+          "display_name": "Akun A02"
+        },
+        {
+          "type": "reply",
+          "id": "9000000017",
+          "actor": "a07",
+          "parent": "9000000001",
+          "text": "Baru ikut membaca, menarik.",
+          "published_at": "2026-10-18T10:00:00Z",
+          "handle": "akun_a07",
+          "display_name": "Akun A07"
+        }
+      ],
+      "confirmed_unavailable": [
+        {
+          "id": "9000000014",
+          "evidence": "Halaman komentar menampilkan 'komentar ini telah dihapus'."
+        }
+      ],
+      "artifacts": [
+        {
+          "kind": "dom_snapshot",
+          "filename": "putaran4.html",
+          "content_type": "text/html",
+          "text": "<html><body><p>Contoh DOM sintetis putaran 4</p></body></html>"
+        }
+      ]
+    }
+  ]
+}
