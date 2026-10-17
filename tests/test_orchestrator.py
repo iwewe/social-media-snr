@@ -43,7 +43,10 @@ URL = "https://x.com/u/status/1"
 
 
 @pytest.fixture(autouse=True)
-def clean_registry():
+def clean_registry(settings, tmp_path):
+    settings.SNR_EVIDENCE_ROOT = tmp_path / "evidence"  # jangan bergantung pada /srv/snr (CI)
+    settings.SNR_BROWSER_PROFILES_ROOT = tmp_path / "profiles"
+    (tmp_path / "evidence").mkdir()
     registry.clear()
     yield
     registry.clear()
