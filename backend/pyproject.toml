@@ -14,6 +14,7 @@ dependencies = [
 [dependency-groups]
 browser = ["playwright"]
 dev = [
+    {include-group = "browser"},
     "ruff",
     "mypy",
     "django-stubs[compatible-mypy]",

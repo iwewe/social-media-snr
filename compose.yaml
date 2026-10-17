@@ -90,7 +90,7 @@ services:
       context: .
       dockerfile: deployment/backend.Dockerfile
       target: browser
-    command: celery -A config worker -Q browser -l info
+    command: celery -A config worker -Q browser -c 1 -l info  # profil Chromium: satu proses
     volumes:
       - ./backend:/app
       - ${SNR_HOST_DATA:-./snr-data}/evidence:/srv/snr/evidence

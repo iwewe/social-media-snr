@@ -26,4 +26,4 @@ RUN uv sync --locked --no-install-project --group browser \
     && playwright install --with-deps chromium \
     && chmod -R a+rX /opt/pw-browsers
 COPY backend/ ./
-CMD ["celery", "-A", "config", "worker", "-Q", "browser", "-l", "info"]
+CMD ["celery", "-A", "config", "worker", "-Q", "browser", "-c", "1", "-l", "info"]

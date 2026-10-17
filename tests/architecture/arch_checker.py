@@ -98,7 +98,9 @@ def default_import_rules() -> list[ImportRule]:
 def default_confined_rules() -> list[ConfinedImportRule]:
     return [
         ConfinedImportRule(
-            "Playwright hanya di adapter koleksi", "playwright", ("collection.adapters",)
+            "Playwright hanya di adapter dan toolkit browser koleksi",
+            "playwright",
+            ("collection.adapters", "collection.browser"),
         )
     ]
 

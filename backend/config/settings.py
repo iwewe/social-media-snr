@@ -173,4 +173,7 @@ SNR_FIXTURE_DATASETS_DIR = (
     if os.environ.get("SNR_FIXTURE_DATASETS_DIR")
     else None
 )
+# Simulasi platform untuk PoC browser (WP-1.8). Kosong = adapter simulasi tidak terdaftar.
+SNR_SIMULATION_BASE_URL = os.environ.get("SNR_SIMULATION_BASE_URL") or None
+SNR_SIMULATION_PLATFORM = os.environ.get("SNR_SIMULATION_PLATFORM", "x")
 SNR_ADAPTERS = [a for a in os.environ.get("SNR_ADAPTERS", "").split(",") if a]
