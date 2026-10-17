@@ -149,7 +149,19 @@ def run_repr(run: InspectionRun, *, messages: list[Message] | None = None) -> di
 
 
 def run_detail(run: InspectionRun) -> dict[str, Any]:
-    return {**run_repr(run), "artifacts": [artifact_repr(a) for a in run.artifacts.all()]}
+    target = run.target
+    return {
+        **run_repr(run),
+        # Cukup untuk judul halaman dan tautan kembali; tanpa catatan konteks target.
+        "target": {
+            "id": target.pk,
+            "platform": target.platform,
+            "target_type": target.target_type,
+            "normalized_url": target.normalized_url,
+            "investigation_id": target.investigation_id,
+        },
+        "artifacts": [artifact_repr(a) for a in run.artifacts.all()],
+    }
 
 
 def artifact_repr(a: EvidenceArtifact) -> dict[str, Any]:

@@ -1,6 +1,7 @@
 import type { Inspections } from "../hooks/useInspections";
 import { ContextHelp } from "../help/ContextHelp";
 import { ErrorMessage } from "./ErrorMessage";
+import { STATUS_LABELS } from "../inspection/labels";
 import { RunCard } from "./RunCard";
 
 /** Tombol Inspect / Inspect Again dan riwayat run. Run terbaru terbuka; yang lama dilipat. */
@@ -39,7 +40,7 @@ export function InspectionPanel({ inspections }: { inspections: Inspections }) {
         ) : (
           <details key={run.id} className="older-run">
             <summary>
-              Run #{run.sequence} - {run.status}
+              Run #{run.sequence} - {STATUS_LABELS[run.status]}
             </summary>
             <RunCard run={run} />
           </details>

@@ -383,3 +383,13 @@ def test_presenter_caps_page_size_independently_of_the_serializer(api, django_ca
     page = observation_page(InspectionRun.objects.get(pk=run_id), page=1, page_size=10**6)
     assert page["page_size"] == MAX_PAGE_SIZE == 200
     assert observation_page(InspectionRun.objects.get(pk=run_id), page=-3, page_size=0)["page"] == 1
+
+
+def test_run_detail_identifies_its_target_for_navigation(api, django_capture_on_commit_callbacks) -> None:
+    tid = make_target(api)
+    run_id = inspect(api, tid, django_capture_on_commit_callbacks)
+    target = detail(api, run_id)["target"]
+    inv_id = CollectionTarget.objects.get(pk=tid).investigation_id
+    assert target == {"id": tid, "platform": "x", "target_type": "post",
+                      "normalized_url": POST_URL, "investigation_id": inv_id}
+    assert "context" not in target and "note" not in json.dumps(target)

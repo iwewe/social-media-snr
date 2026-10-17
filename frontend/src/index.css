@@ -309,3 +309,50 @@ details.technical ul {
   padding-left: 1.2rem;
   overflow-wrap: anywhere;
 }
+
+.table-scroll {
+  overflow-x: auto;
+  margin: 8px 0;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+th,
+td {
+  padding: 4px 8px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+}
+td code {
+  overflow-wrap: anywhere;
+}
+tr[data-observed="false"] {
+  opacity: 0.8;
+  background: var(--bg);
+}
+.badge[data-reconciliation-badge="NOT_OBSERVED"],
+.badge[data-reconciliation-badge="CONFIRMED_UNAVAILABLE"],
+.badge[data-reconciliation-badge="MODIFIED"] {
+  border-style: dashed;
+  border-width: 2px;
+}
+section.review {
+  padding: 8px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+}
+
+/* keterbacaan tabel respons dan pesan */
+td code {
+  white-space: nowrap;
+}
+.table-scroll .badge {
+  white-space: nowrap;
+}
+.message > strong {
+  display: block;
+  font-weight: 700;
+}

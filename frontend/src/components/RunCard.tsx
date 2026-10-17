@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 import type { RunMessage, RunSummary } from "../api/types";
 import {
   RECONCILIATION_LABELS,
@@ -27,8 +29,11 @@ function paginationText(value: boolean | null): string {
 }
 
 /** Satu run: status, keadaan data, pesan ramah, cakupan (dua angka terpisah), detail teknis. */
-export function RunCard({ run }: { run: RunSummary }) {
+export function RunCard({ run, linkToDetail = true }: { run: RunSummary; linkToDetail?: boolean }) {
   const cov = run.coverage;
+  // Pengambilan gagal: "0 teramati" mudah terbaca sebagai "tidak ada balasan"; tulis apa adanya.
+  const observed = (n: number | null) =>
+    run.data_state === "access_failed" ? "tidak diambil (pengambilan gagal)" : formatCount(n);
   const counts = run.reconciliation?.state === "DONE" ? run.reconciliation.counts : null;
   return (
     <div className="run" data-status={run.status} aria-label={`Run ${run.sequence}`}>
@@ -50,9 +55,9 @@ export function RunCard({ run }: { run: RunSummary }) {
           <dt>Ditampilkan platform</dt>
           <dd data-field="displayed">{formatCount(cov.platform_displayed_count)}</dd>
           <dt>Balasan unik teramati</dt>
-          <dd data-field="observed-replies">{formatCount(cov.observed_reply_count)}</dd>
+          <dd data-field="observed-replies">{observed(cov.observed_reply_count)}</dd>
           <dt>Objek unik teramati</dt>
-          <dd data-field="observed-objects">{formatCount(cov.observed_object_count)}</dd>
+          <dd data-field="observed-objects">{observed(cov.observed_object_count)}</dd>
           <dt>Paginasi</dt>
           <dd data-field="pagination">{paginationText(cov.pagination_complete)}</dd>
         </dl>
@@ -67,6 +72,12 @@ export function RunCard({ run }: { run: RunSummary }) {
             .filter(([, n]) => n > 0)
             .map(([key, n]) => `${RECONCILIATION_LABELS[key] ?? key}: ${n}`)
             .join(", ") || "tidak ada perubahan"}
+        </p>
+      )}
+
+      {linkToDetail && run.data_state !== "in_progress" && (
+        <p>
+          <Link to={`/inspections/${run.id}`}>Lihat respons mentah dan bukti</Link>
         </p>
       )}
 

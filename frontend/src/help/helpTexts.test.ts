@@ -50,6 +50,14 @@ describe("teks petunjuk (PRD bagian 12)", () => {
     expect(body).toContain("tidak boleh dianggap dihapus");
   });
 
+  it("melihat respons: data mentah, penulis dari ID akun, tidak teramati bukan dihapus", () => {
+    const body = HELP.viewResponses.body.toLowerCase();
+    expect(body).toContain("belum ada klasifikasi");
+    expect(body).toContain("id akun");
+    expect(body).toContain("bukan dihapus");
+    expect(body).toContain("berbeda dari kesepakatan");
+  });
+
   it("label ketidakpastian menjelaskan UNDETERMINED bukan netral", () => {
     const body = HELP.uncertaintyLabels.body;
     expect(body).toContain("UNDETERMINED");
