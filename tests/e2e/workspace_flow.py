@@ -111,7 +111,9 @@ def main() -> None:
         card = page.locator(f"article[aria-label='Target {URL_NORMAL}']")
         expect(card).to_be_visible()
         expect(card.get_by_role("link", name=URL_NORMAL)).to_be_visible()
-        expect(card.get_by_text("Belum diperiksa")).to_be_visible()
+        badge = card.locator(".badge.state")
+        expect(badge).to_have_attribute("data-state", "not_inspected")
+        expect(badge).to_have_text("Belum diperiksa")
         expect(card.get_by_text("P1:")).to_be_visible()
         expect(card.get_by_text("CONTRA", exact=True)).to_be_visible()
         assert card.locator("p.note").first.inner_text() == NOTE
@@ -127,15 +129,17 @@ def main() -> None:
         page.set_viewport_size({"width": 1000, "height": 900})
         step("tampilan 390px tanpa scroll horizontal")
 
-        # 8. Tombol inspeksi belum tersedia, petunjuknya ada.
-        expect(card.get_by_role("button", name="Inspect", exact=True)).to_be_disabled()
-        expect(card.get_by_role("button", name="Inspect Again")).to_be_disabled()
-        card.get_by_label("Petunjuk: Inspeksi ulang").click()
-        expect(card.get_by_role("note").filter(has_text="tidak digandakan")).to_be_visible()
+        # 8. Target baru: belum pernah diperiksa. Inspect aktif (tidak diklik di sini: skenario ini
+        #    tidak menjalankan worker), belum ada "Inspect Again", petunjuk tersedia.
+        expect(card.get_by_role("button", name="Inspect", exact=True)).to_be_enabled()
+        expect(card.get_by_role("button", name="Inspect Again")).to_have_count(0)
+        expect(card.get_by_text("Belum pernah diperiksa. Tekan Inspect")).to_be_visible()
         card.get_by_label("Petunjuk: Memulai inspeksi").click()
         expect(card.get_by_role("note").filter(has_text="parsial")).to_be_visible()
+        card.get_by_label("Petunjuk: Belum diperiksa, tidak ada data, gagal mengakses").click()
+        expect(card.get_by_role("note").filter(has_text="bukan berarti tidak ada balasan")).to_be_visible()
         shot(page, "04-kartu-target")
-        step("inspeksi dinonaktifkan; petunjuk inspeksi dan inspeksi ulang tampil")
+        step("Inspect aktif pada target baru; petunjuk inspeksi dan tiga keadaan data tampil")
 
         # 9. URL yang sama (ditulis berbeda) tidak membuat target ganda.
         target_form.get_by_label("URL target").fill("http://www.x.com/u/status/1/")

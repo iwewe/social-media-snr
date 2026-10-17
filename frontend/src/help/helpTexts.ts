@@ -18,11 +18,15 @@ export const HELP = {
   },
   startInspection: {
     title: "Memulai inspeksi",
-    body: "Inspeksi mengambil data yang tersedia dan diizinkan pada saat itu, bukan seluruh isi platform. Cakupan dan batas akses dicatat, dan hasilnya bisa parsial. Data yang kosong atau tidak terlihat tidak otomatis berarti objeknya tidak ada. Fitur inspeksi belum tersedia pada tahap ini.",
+    body: "Inspeksi mengambil data yang tersedia dan diizinkan pada saat itu, bukan seluruh isi platform. Cakupan dan batas akses dicatat, dan hasilnya bisa parsial. Data yang kosong atau tidak terlihat tidak otomatis berarti objeknya tidak ada. Pemeriksaan berjalan di latar belakang dan statusnya diperbarui otomatis.",
   },
   reinspection: {
     title: "Inspeksi ulang",
     body: "Inspeksi ulang membuat pemeriksaan baru atas target yang sama; targetnya tidak dibuat ulang. Objek lama tidak digandakan, objek baru ditambahkan, dan perubahan ditinjau berdasarkan data baru. Objek yang tidak muncul pada satu pemeriksaan tidak dianggap terhapus.",
+  },
+  dataStates: {
+    title: "Belum diperiksa, tidak ada data, gagal mengakses",
+    body: "Tiga keadaan ini berbeda. Belum diperiksa: target belum pernah dicek, jadi belum ada data. Tidak ada data: pemeriksaan berhasil membaca target dan memang tidak menemukan balasan. Gagal mengakses data: pengambilan ditolak, gagal, atau belum didukung, sehingga TIDAK ada kesimpulan tentang isi target dan ini bukan berarti tidak ada balasan. Pada hasil parsial, objek yang tidak muncul tidak boleh dianggap dihapus.",
   },
   uncertaintyLabels: {
     title: "Label ketidakpastian",
@@ -38,5 +42,6 @@ export const REQUIRED_HELP_IDS: readonly HelpId[] = [
   "targetNote",
   "startInspection",
   "reinspection",
+  "dataStates",
   "uncertaintyLabels",
 ];
