@@ -221,6 +221,49 @@ def test_two_owners_demoting_each_other_at_once_never_leave_zero_owners() -> Non
     assert owners == 1
 
 
+@pytest.mark.django_db(transaction=True)
+def test_membership_changes_wait_for_the_investigation_lock() -> None:
+    """Deterministik (bukan menebak balapan): selama satu transaksi memegang kunci investigasi,
+    perubahan keanggotaan lain TIDAK boleh selesai; setelah kunci dilepas barulah selesai."""
+    import threading
+    import time
+
+    owner = make_user("pemegang-kunci")
+    investigation = inv_services.create_investigation(user=owner, name="Kunci")
+    other = make_user("anggota-menunggu")
+    team.grant(investigation=investigation, user=other, role="MEMBER", added_by=owner)
+    holding, release, finished = threading.Event(), threading.Event(), threading.Event()
+
+    def hold():
+        try:
+            with transaction.atomic():
+                team._lock(investigation)
+                holding.set()
+                release.wait(15)
+        finally:
+            connection.close()
+
+    def change():
+        try:
+            holding.wait(15)
+            team.change_role(investigation=investigation, user=other, role="VIEWER", by=owner)
+            finished.set()
+        finally:
+            connection.close()
+
+    holder, changer = threading.Thread(target=hold), threading.Thread(target=change)
+    holder.start()
+    assert holding.wait(15)
+    changer.start()
+    time.sleep(0.8)  # waktu bagi perubahan untuk "menyelesaikan diri" bila kunci tidak berlaku
+    blocked = not finished.is_set()
+    release.set()
+    holder.join(15)
+    changer.join(15)
+    assert blocked, "perubahan keanggotaan selesai padahal kunci investigasi sedang dipegang"
+    assert finished.is_set()
+
+
 # --- integritas di basis data -----------------------------------------------------------------
 
 

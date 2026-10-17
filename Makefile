@@ -1,7 +1,7 @@
 # Perintah pengembangan SNR. Recipe memakai ">" sebagai prefix agar tidak bergantung pada tab.
 .RECIPEPREFIX = >
 .DEFAULT_GOAL := help
-.PHONY: help install lint typecheck test fmt ci backend-install frontend-install init-data up down logs ps e2e
+.PHONY: help install lint typecheck test test-backend test-browser test-frontend t fast mutate fmt ci backend-install frontend-install init-data up down logs ps e2e
 
 help: ## Tampilkan daftar perintah
 > @grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -22,16 +22,32 @@ typecheck: ## Type-check backend (mypy) dan frontend (tsc)
 > cd backend && DJANGO_SECRET_KEY=ci-only-not-a-secret uv run mypy .
 > cd frontend && npm run -s typecheck
 
-test: ## Test backend (pytest di container web; tes browser di worker-browser) dan frontend (vitest)
-> docker compose run --rm -T web pytest -q --ignore=../tests/browser
+test-backend: ## Tes backend paralel (pytest-xdist; satu database uji per worker)
+> docker compose run --rm -T web pytest -q -n auto --ignore=../tests/browser
+
+test-browser: ## Tes browser (Chromium) di worker-browser; wajib ada Chromium
 > docker compose run --rm -T -v ./tests:/tests -e SNR_REQUIRE_BROWSER=1 worker-browser pytest -c pyproject.toml -q ../tests/browser
+
+test-frontend: ## Tes frontend (vitest)
 > cd frontend && npm run -s test
+
+test: ## Semua tes SEKALIGUS (backend, browser, frontend berjalan bersamaan)
+> $(MAKE) -j3 -Otarget test-backend test-browser test-frontend
+
+t: ## Tingkat 0: tes terarah tanpa xdist. Contoh: make t T="../tests/test_x.py -k nama"
+> docker compose run --rm -T web pytest -c pyproject.toml -q -n0 $(T)
+
+mutate: ## Tingkat 2: mutasi sengaja. Contoh: make mutate SPEC=tests/mutation_specs/a3_backend.py
+> python3 tests/tools/mutate.py $(SPEC)
 
 fmt: ## Rapikan format kode
 > cd backend && uv run ruff check --fix . && uv run ruff format .
 > cd frontend && npm run -s format
 
-ci: lint typecheck test ## Urutan yang sama dengan CI
+fast: ## Tingkat 0: lint + typecheck bersamaan (tanpa tes); jalankan terus saat menulis kode
+> $(MAKE) -j2 -Otarget lint typecheck
+
+ci: fast test ## Tingkat 1: yang dijalankan CI (lint, typecheck, semua tes) sebelum commit/PR
 > cd frontend && npm run -s build
 
 init-data: ## Buat direktori data lokal (postgres, evidence, profil browser, backup, ekspor)
