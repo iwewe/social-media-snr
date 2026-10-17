@@ -12,7 +12,7 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
-from .enums import InitialStance, Platform, TargetType
+from .enums import InitialStance, Platform, Role, TargetType
 from .errors import DomainError
 from .target_urls import normalize_target_url
 
@@ -181,3 +181,44 @@ class TargetPropositionStance(models.Model):
         target_investigation = self.context_version.target.investigation_id
         if self.proposition.issue.investigation_id != target_investigation:
             raise DomainError("Proposition harus berasal dari investigasi yang sama dengan target.")
+
+
+class InvestigationMembership(models.Model):
+    """Keanggotaan pengguna pada investigasi (A3). Tidak pernah dihapus: dicabut lewat `revoked_at`
+    (trigger DB menjaga ini). Satu keanggotaan AKTIF per (investigasi, pengguna)."""
+
+    investigation = models.ForeignKey(
+        Investigation, on_delete=models.PROTECT, related_name="memberships"
+    )
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    role = models.CharField(max_length=10, choices=Role.choices)
+    added_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    revoked_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+
+    class Meta:
+        ordering = ["investigation_id", "created_at", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["investigation", "user"],
+                condition=models.Q(revoked_at__isnull=True),
+                name="uniq_active_membership",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(role__in=Role.values), name="membership_role_valid"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(revoked_at__isnull=True, revoked_by__isnull=True)
+                | models.Q(revoked_at__isnull=False, revoked_by__isnull=False),
+                name="membership_revocation_complete",
+            ),
+        ]
+        indexes = [models.Index(fields=["user", "revoked_at"], name="membership_user_idx")]
+
+    def __str__(self) -> str:
+        return f"{self.user_id}@{self.investigation_id}:{self.role}"

@@ -128,7 +128,10 @@ def test_run_detail_shows_the_last_verification_per_artifact(api, run) -> None:
 
 
 def test_every_verification_is_recorded_per_user(api, run, user) -> None:
+    from investigations import team
+
     other = User.objects.create_user("peninjau", password="x")
+    team.grant(investigation=run.target.investigation, user=other, role="VIEWER", added_by=user)
     c2 = Client()
     c2.force_login(other)
     a = artifact(run, "dom_snapshot")

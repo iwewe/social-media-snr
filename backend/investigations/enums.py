@@ -23,3 +23,11 @@ class InitialStance(models.TextChoices):
     CONTRA = "CONTRA", "CONTRA"
     MIXED = "MIXED", "MIXED"
     UNDETERMINED = "UNDETERMINED", "UNDETERMINED"
+
+
+class Role(models.TextChoices):
+    """Peran anggota pada SATU investigasi (ADR 0021). Super admin ditentukan `is_superuser`."""
+
+    OWNER = "OWNER", "Pemilik"
+    MEMBER = "MEMBER", "Anggota"
+    VIEWER = "VIEWER", "Pembaca"
