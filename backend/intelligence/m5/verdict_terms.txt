@@ -1,0 +1,15 @@
+# Istilah vonis yang DITOLAK pada teks temuan (FR-079). Satu ekspresi reguler per baris; dicocokkan pada
+# kata utuh, tanpa membedakan huruf besar/kecil. Daftar ini data, bukan kode: pemindai arsitektur
+# melarang identifier bertema skor/vonis di kode, dan daftar penolak ini sengaja diletakkan di luar kode.
+buzzer
+akun\s+bayaran
+operasi\s+berbayar
+dibayar
+berbayar
+aktor\s+pengendali
+pengendali
+dikendalikan
+pasukan\s+siber
+cyber\s*troops?
+troll
+botnet
