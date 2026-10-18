@@ -14,7 +14,7 @@ from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 
-from collection.models import AppendOnlyModel, PostObservation
+from collection.models import ActorAccount, AppendOnlyModel, PostObservation
 from investigations.enums import Platform
 from investigations.models import (
     CollectionTarget,
@@ -271,3 +271,42 @@ class ResponseAssessment(AppendOnlyModel):
         return (
             f"{self.source} {self.issue_stance}/{self.target_alignment} obs {self.observation_id}"
         )
+
+
+class ActorIssueProfile(AppendOnlyModel):
+    """Profil aktivitas SATU akun pada satu platform, terikat issue/proposition, periode, dan
+    AnalysisRun (WP-2.3; FR-060..FR-065). Level A saja: dibangun dari respons teramati pada target
+    investigasi.
+
+    Bukan label kepribadian, identitas orang, atau klasifikasi permanen. `coverage` WAJIB (tidak
+    boleh kosong): menyatakan target, periode, pemeriksaan, dan keterbatasan sehingga profil tidak
+    terbaca
+    sebagai seluruh riwayat akun (FR-063, AT-17). Dimensi yang datanya kurang bernilai
+    INSUFFICIENT_DATA.
+    """
+
+    analysis_run = models.ForeignKey(AnalysisRun, on_delete=models.PROTECT, related_name="profiles")
+    source_run = models.ForeignKey(AnalysisRun, on_delete=models.PROTECT, related_name="+")
+    actor = models.ForeignKey(ActorAccount, on_delete=models.PROTECT, related_name="+")
+    proposition = models.ForeignKey(Proposition, on_delete=models.PROTECT, related_name="+")
+    level = models.CharField(max_length=1, default="A")
+    period_start = models.DateTimeField()
+    period_end = models.DateTimeField()
+    dimensions = models.JSONField()
+    coverage = models.JSONField()
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        ordering = ["analysis_run_id", "actor_id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["analysis_run", "actor"], name="uniq_profile_per_actor"
+            ),
+            models.CheckConstraint(condition=Q(level="A"), name="profile_level_a_only"),
+            models.CheckConstraint(
+                condition=Q(period_end__gt=models.F("period_start")), name="profile_period_valid"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"Profil Level {self.level} akun {self.actor_id} ({self.analysis_run_id})"
