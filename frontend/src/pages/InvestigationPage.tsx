@@ -57,6 +57,11 @@ export function InvestigationPage() {
           {ROLE_DESCRIPTIONS[role]}
         </p>
       )}
+      <p>
+        <Link to={`/investigations/${detail.id}/analysis`}>
+          Analisis: respons terklasifikasi, jaringan, profil, temuan
+        </Link>
+      </p>
       {detail.description && <p>{detail.description}</p>}
 
       <section>

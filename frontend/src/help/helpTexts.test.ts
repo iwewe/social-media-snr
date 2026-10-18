@@ -79,4 +79,15 @@ describe("teks petunjuk (PRD bagian 12)", () => {
     expect(all).not.toMatch(/skor (buzzer|bot)/);
     expect(all).not.toContain("buzzer score");
   });
+
+  it("teks analisis I2 membedakan interaksi dari kemiripan dan tidak memberi vonis", () => {
+    const net = HELP.viewNetwork.body.toLowerCase();
+    expect(net).toContain("putus-putus");
+    expect(net).toContain("bukan bukti");
+    const all = ["viewClassifiedResponses", "viewActorProfile", "viewNetwork", "viewFindings"]
+      .map((k) => HELP[k as keyof typeof HELP].body.toLowerCase())
+      .join(" ");
+    for (const bad of ["skor", "peringkat", "mencurigakan"]) expect(all).not.toContain(bad);
+    expect(HELP.viewFindings.body.toLowerCase()).toContain("bukan probabilitas");
+  });
 });

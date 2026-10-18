@@ -80,6 +80,24 @@ for flow in workspace_flow inspection_flow team_flow; do
     worker-browser python "/e2e/$flow.py"
 done
 
+echo "-- analysis_flow (analisis I2 dari run_analyses pada data E2E)"
+ANALYSIS_IDS="$(docker compose run --rm --no-deps -e POSTGRES_DB=$DB web python manage.py shell -c \
+  "from collection.models import InspectionRun; from investigations.models import Issue, Proposition; \
+r = [x for x in InspectionRun.objects.order_by('id') if isinstance(x.ingestion, dict) and x.ingestion.get('state', '').startswith('FINISHED')]; \
+inv = r[0].target.investigation; \
+issue = inv.issues.first() or Issue.objects.create(investigation=inv, title='Isu analisis E2E', created_by=inv.created_by); \
+p = issue.propositions.first() or Proposition.objects.create(issue=issue, number=1, statement='Klaim uji E2E', created_by=inv.created_by); \
+print('IDS', inv.pk, p.pk)" | grep '^IDS' | tail -1)"
+read -r _ ANALYSIS_INV ANALYSIS_PROP <<<"$ANALYSIS_IDS"
+docker compose run --rm --no-deps -e POSTGRES_DB=$DB web python manage.py run_analyses \
+  --investigation "$ANALYSIS_INV" --proposition "$ANALYSIS_PROP" --user "$E2E_USER" \
+  --pro-cue setuju --contra-cue tolak --exploratory
+docker compose run --rm --no-deps \
+  -v "$PWD/tests/e2e:/e2e:ro" -v "$SHOTS:/shots" \
+  -e E2E_BASE_URL="http://$FRONT:5174" -e E2E_USER="$E2E_USER" -e E2E_PASSWORD="$PASSWORD" \
+  -e E2E_INVESTIGATION="$ANALYSIS_INV" -e E2E_SHOTS=/shots \
+  worker-browser python /e2e/analysis_flow.py
+
 echo "-- tamper_flow (berkas bukti diubah di disk)"
 TARGET_FILE="$(find "$E2E_DATA/evidence" -type f -name 'putaran4.html' | head -1)"
 [ -n "$TARGET_FILE" ] || { echo "berkas DOM bukti tidak ditemukan untuk uji pengubahan"; exit 1; }

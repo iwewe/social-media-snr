@@ -40,6 +40,22 @@ export const HELP = {
     title: "Label ketidakpastian",
     body: 'UNDETERMINED berarti belum dapat ditentukan, bukan netral. MIXED berarti posisinya campuran. Pilih UNDETERMINED bila ragu atau bila penilaian bergantung pada isi gambar/video yang tidak dianalisis sistem. Kesimpulan "belum cukup bukti" adalah hasil yang sah.',
   },
+  viewClassifiedResponses: {
+    title: "Respons terklasifikasi",
+    body: "Setiap respons ditandai kategorinya: fakta observasi (data yang diambil apa adanya), hasil mesin (klasifikasi otomatis dari aturan), atau ditinjau manusia (koreksi peninjau yang menjadi baris baru, bukan menimpa). Stance dinilai terhadap proposition dan berbeda dari kesepakatan terhadap posting yang dibalas. Klasifikasi mesin dapat keliru; respons yang ditandai perlu tinjauan sebaiknya diperiksa manusia, dan semua koreksi tersimpan dengan riwayatnya.",
+  },
+  viewActorProfile: {
+    title: "Profil akun terhadap isu",
+    body: "Profil ini meringkas apa yang terobservasi dari satu akun pada isu ini, per dimensi, dengan pernyataan cakupan di bagian atas: berapa banyak data yang tersedia dan apa yang tidak terlihat. Dimensi tanpa data cukup ditandai data belum cukup, bukan nol. Profil bukan penilaian niat atau identitas akun, dan tidak memberi vonis tentang siapa yang berada di balik akun.",
+  },
+  viewNetwork: {
+    title: "Jaringan dan indikator pola",
+    body: "Garis penuh berpanah adalah interaksi yang tercatat (balasan, kutipan, dan sejenisnya). Garis putus-putus tanpa panah adalah kemiripan perilaku yang dihitung, dan BUKAN bukti hubungan atau koordinasi antar akun. Setiap indikator disertai pembanding acak dan penjelasannya; pola yang sama dapat muncul secara wajar, misalnya karena topik yang sedang ramai. Komunitas hasil algoritma dapat berubah antar-jalankan, dan hasil jaringan hanya bahan untuk ditinjau manusia.",
+  },
+  viewFindings: {
+    title: "Temuan",
+    body: "Temuan adalah pernyataan pola yang terobservasi, ditulis dan disahkan peninjau manusia. Setiap temuan memuat confidence beserta alasannya (bukan probabilitas), kualitas bukti pada empat sumbu terpisah, dan pertimbangan semua hipotesis alternatif. Temuan tidak menyatakan adanya operasi berbayar atau pengendali akun. Revisi membuat versi baru; versi lama tetap tersimpan. Data sintetis hanya menguji alur dan membatasi confidence.",
+  },
 } as const;
 
 export type HelpId = keyof typeof HELP;
@@ -54,4 +70,8 @@ export const REQUIRED_HELP_IDS: readonly HelpId[] = [
   "teamRoles",
   "viewResponses",
   "uncertaintyLabels",
+  "viewClassifiedResponses",
+  "viewActorProfile",
+  "viewNetwork",
+  "viewFindings",
 ];
