@@ -5,6 +5,7 @@ import { api } from "../api/client";
 import { errorText } from "../api/errorText";
 import type { AnalysisRunInfo, CoordinationRow, InvestigationDetail } from "../api/types";
 import { ErrorMessage } from "../components/ErrorMessage";
+import { AuditPanel, type AuditScope } from "../components/analysis/AuditPanel";
 import { FindingsPanel } from "../components/analysis/FindingsPanel";
 import { NetworkPanel } from "../components/analysis/NetworkPanel";
 import { ObservationDrawer } from "../components/analysis/ObservationDrawer";
@@ -13,12 +14,13 @@ import { ResponsesPanel } from "../components/analysis/ResponsesPanel";
 import { RoleBadge } from "../components/RoleBadge";
 import { canWrite } from "../team/roles";
 
-type Tab = "responses" | "network" | "profiles" | "findings";
+type Tab = "responses" | "network" | "profiles" | "findings" | "audit";
 const TABS: { id: Tab; label: string }[] = [
   { id: "responses", label: "Respons" },
   { id: "network", label: "Jaringan" },
   { id: "profiles", label: "Profil akun" },
   { id: "findings", label: "Temuan" },
+  { id: "audit", label: "Jejak audit" },
 ];
 
 function RunPicker({
@@ -67,6 +69,8 @@ export function AnalysisPage() {
   const [error, setError] = useState<string | null>(null);
   const [observation, setObservation] = useState<number | null>(null);
   const [focusFinding, setFocusFinding] = useState<number | null>(null);
+  const [actorFilter, setActorFilter] = useState<number | null>(null);
+  const [auditScope, setAuditScope] = useState<AuditScope | null>(null);
   const [selected, setSelected] = useState<Map<number, CoordinationRow>>(new Map());
   const [m2Id, setM2Id] = useState(0);
   const [m3Id, setM3Id] = useState(0);
@@ -102,7 +106,17 @@ export function AnalysisPage() {
   }, []);
   const openFinding = (fid: number) => {
     setFocusFinding(fid);
+    setObservation(null);
     setTab("findings");
+  };
+  const openActor = (actorId: number) => {
+    setActorFilter(actorId);
+    setTab("responses");
+  };
+  const openAudit = (scope: AuditScope) => {
+    setAuditScope(scope);
+    setObservation(null);
+    setTab("audit");
   };
 
   if (error) return <ErrorMessage error={error} />;
@@ -156,6 +170,8 @@ export function AnalysisPage() {
               key={activeM2.id}
               run={activeM2}
               canReview={writable}
+              actorId={actorFilter}
+              onClearActor={() => setActorFilter(null)}
               onOpenObservation={setObservation}
             />
           </>
@@ -169,6 +185,7 @@ export function AnalysisPage() {
           selected={selected}
           onToggleIndicator={toggleIndicator}
           onOpenObservation={setObservation}
+          onOpenActor={openActor}
         />
       )}
       {tab === "network" && m4.length === 0 && <NoAnalysis what="jaringan (M4)" />}
@@ -189,6 +206,17 @@ export function AnalysisPage() {
           selected={[...selected.values()]}
           focusId={focusFinding}
           onOpenObservation={setObservation}
+          onOpenAudit={(id) => openAudit({ subject_type: "finding", subject_id: id })}
+        />
+      )}
+      {tab === "audit" && (
+        <AuditPanel
+          key={JSON.stringify(auditScope)}
+          investigationId={detail.id}
+          scope={auditScope}
+          onClearScope={() => setAuditScope(null)}
+          onOpenObservation={setObservation}
+          onOpenFinding={openFinding}
         />
       )}
       {observation !== null && (
@@ -197,6 +225,7 @@ export function AnalysisPage() {
           observationId={observation}
           onClose={() => setObservation(null)}
           onOpenFinding={openFinding}
+          onOpenAudit={(id) => openAudit({ observation: id })}
         />
       )}
     </>

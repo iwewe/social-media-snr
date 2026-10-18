@@ -34,6 +34,29 @@ function open(role: InvestigationDetail["my_role"], runs: unknown[], tab = "resp
     "GET /api/investigations/1/": () => ({ body: detail(role) }),
     "GET /api/investigations/1/analysis-runs/": () => ({ body: { results: runs } }),
     "GET /api/investigations/1/findings/": () => ({ body: { results: [FINDING] } }),
+    "GET /api/investigations/1/audit/?page=1&page_size=20": () => ({
+      body: {
+        count: 1,
+        page: 1,
+        page_size: 20,
+        notice: "Jejak ini hanya dapat bertambah.",
+        results: [
+          {
+            id: 1,
+            at: "2026-10-18T01:00:00Z",
+            actor: "analis",
+            action: "FINDING_DRAFT",
+            action_label: "Temuan dibuat",
+            subject_type: "finding",
+            subject_id: 3,
+            subject_type_label: "Temuan",
+            before: null,
+            after: { finding_id: 3, title: "Pola balasan serupa" },
+            reason: "Alasan confidence.",
+          },
+        ],
+      },
+    }),
   });
   return render(
     <MemoryRouter initialEntries={[`/investigations/1/analysis?tab=${tab}`]}>
@@ -54,7 +77,7 @@ describe("AnalysisPage", () => {
   it("menampilkan tiga kategori secara konsisten dan keempat tab", async () => {
     open("OWNER", []);
     await screen.findByText(/Belum ada analisis/);
-    for (const name of ["Respons", "Jaringan", "Profil akun", "Temuan"]) {
+    for (const name of ["Respons", "Jaringan", "Profil akun", "Temuan", "Jejak audit"]) {
       expect(screen.getByRole("tab", { name })).toBeInTheDocument();
     }
     expect(screen.getAllByText("Fakta observasi").length).toBeGreaterThan(0);
@@ -92,5 +115,14 @@ describe("AnalysisPage", () => {
     for (const bad of ["skor", "peringkat", "mencurigakan", "paling curiga", "buzzer score"]) {
       expect(text).not.toContain(bad);
     }
+  });
+
+  it("tab jejak audit menampilkan peristiwa dan tautan ke temuan", async () => {
+    open("OWNER", [], "audit");
+    expect(await screen.findByRole("button", { name: "Buka temuan #3" })).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "Peristiwa audit" })).toHaveTextContent(
+      "Temuan dibuat",
+    );
+    expect(screen.getByText(/oleh analis/)).toBeInTheDocument();
   });
 });

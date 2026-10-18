@@ -39,12 +39,14 @@ export function NetworkPanel({
   selected,
   onToggleIndicator,
   onOpenObservation,
+  onOpenActor,
 }: {
   graphRuns: AnalysisRunInfo[];
   coordinationRuns: AnalysisRunInfo[];
   selected: Map<number, CoordinationRow>;
   onToggleIndicator: (row: CoordinationRow) => void;
   onOpenObservation: (id: number) => void;
+  onOpenActor: (actorId: number) => void;
 }) {
   const [graphRunId, setGraphRunId] = useState(graphRuns[0]?.id ?? 0);
   const [coRunId, setCoRunId] = useState(0);
@@ -319,7 +321,14 @@ export function NetworkPanel({
               {!selection && <p className="muted">Klik node atau edge pada graf.</p>}
               {detailNode && (
                 <div data-detail="node">
-                  <strong>{detailNode.label}</strong>
+                  <strong>{detailNode.label}</strong>{" "}
+                  <button
+                    type="button"
+                    className="link"
+                    onClick={() => onOpenActor(detailNode.actor.id)}
+                  >
+                    Lihat respons akun ini
+                  </button>
                   <div className="muted">
                     ID {detailNode.actor.external_actor_id ?? "tidak diketahui"}
                   </div>

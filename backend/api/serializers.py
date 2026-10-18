@@ -2,6 +2,7 @@
 
 from rest_framework import serializers
 
+from audit.models import AuditAction, SubjectType
 from collection.contracts import Capability
 from investigations.enums import Platform, Role, TargetType
 
@@ -151,3 +152,11 @@ class FindingInput(serializers.Serializer):
 
 class FindingNoteInput(serializers.Serializer):
     note = serializers.CharField(trim_whitespace=True)
+
+
+class AuditListInput(PageInput):
+    action = serializers.ChoiceField(choices=AuditAction.choices, required=False)
+    subject_type = serializers.ChoiceField(choices=SubjectType.choices, required=False)
+    subject_id = serializers.IntegerField(min_value=1, required=False)
+    actor = serializers.CharField(max_length=150, required=False)
+    observation = serializers.IntegerField(min_value=1, required=False)

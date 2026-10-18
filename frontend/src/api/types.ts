@@ -602,10 +602,43 @@ export interface ObservationTrail extends TierInfo {
     category_label: string;
   }[];
   finding_ids: number[];
+  classification_trail: AuditEvent[];
 }
 
 export interface EvidenceSuggestion {
   axes: string[];
   facts: { synthetic: boolean } & Record<string, unknown>;
   suggestions: Record<string, { level: string; reason: string }>;
+}
+
+export type AuditAction =
+  | "ISSUE_CONTEXT"
+  | "TARGET_CONTEXT"
+  | "CLASSIFICATION_REVIEW"
+  | "FINDING_DRAFT"
+  | "FINDING_REVISE"
+  | "FINDING_ENDORSE"
+  | "FINDING_WITHDRAW";
+export type AuditSubject = "issue" | "target" | "response_assessment" | "finding";
+
+export interface AuditEvent {
+  id: number;
+  at: string;
+  actor: string;
+  action: AuditAction;
+  action_label: string;
+  subject_type: AuditSubject;
+  subject_type_label: string;
+  subject_id: number;
+  before: Record<string, unknown> | null;
+  after: Record<string, unknown>;
+  reason: string;
+}
+
+export interface AuditPage {
+  count: number;
+  page: number;
+  page_size: number;
+  results: AuditEvent[];
+  notice: string;
 }

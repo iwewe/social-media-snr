@@ -12,6 +12,9 @@ from django.db import IntegrityError, transaction
 from django.db.models import Max
 from django.utils import timezone
 
+from audit import services as audit
+from audit.models import AuditAction, SubjectType
+
 from .enums import InitialStance, Role, TargetType
 from .errors import DuplicateTarget, InvalidContext
 from .models import (
@@ -42,6 +45,22 @@ def create_investigation(*, user: User, name: str, description: str = "") -> Inv
     return investigation
 
 
+def _audit_issue_context(
+    issue: Issue, user: User, *, before: IssueContextVersion | None, version: IssueContextVersion
+) -> None:
+    audit.record(
+        investigation_id=issue.investigation_id,
+        actor=user,
+        action=AuditAction.ISSUE_CONTEXT,
+        subject_type=SubjectType.ISSUE,
+        subject_id=issue.pk,
+        before=None
+        if before is None
+        else {"version": before.version, "definition": before.definition},
+        after={"version": version.version, "definition": version.definition},
+    )
+
+
 @transaction.atomic
 def create_issue(
     *, investigation: Investigation, user: User, title: str, definition: str = ""
@@ -50,25 +69,28 @@ def create_issue(
     if not title:
         raise InvalidContext("Judul issue wajib diisi.")
     issue = Issue.objects.create(investigation=investigation, title=title, created_by=user)  # type: ignore[misc]
-    IssueContextVersion.objects.create(
+    version = IssueContextVersion.objects.create(
         issue=issue,
         version=1,
         definition=definition,
         created_by=user,  # type: ignore[misc]
     )
+    _audit_issue_context(issue, user, before=None, version=version)
     return issue
 
 
 @transaction.atomic
 def revise_issue_context(*, issue: Issue, user: User, definition: str) -> IssueContextVersion:
     Issue.objects.select_for_update().get(pk=issue.pk)
-    latest = issue.context_versions.aggregate(m=Max("version"))["m"] or 0
-    return IssueContextVersion.objects.create(
+    previous = issue.context_versions.order_by("-version").first()
+    version = IssueContextVersion.objects.create(
         issue=issue,
-        version=latest + 1,
+        version=(previous.version if previous else 0) + 1,
         definition=definition,
         created_by=user,  # type: ignore[misc]
     )
+    _audit_issue_context(issue, user, before=previous, version=version)
+    return version
 
 
 @transaction.atomic
@@ -121,10 +143,10 @@ def _write_context_version(
     note: str,
     stances: list[tuple[Proposition, str]],
 ) -> TargetContextVersion:
-    latest = target.context_versions.aggregate(m=Max("version"))["m"] or 0
+    previous = target.context_versions.order_by("-version").first()
     version = TargetContextVersion.objects.create(
         target=target,
-        version=latest + 1,
+        version=(previous.version if previous else 0) + 1,
         note=note,
         created_by=user,  # type: ignore[misc]
     )
@@ -132,7 +154,26 @@ def _write_context_version(
         TargetPropositionStance(context_version=version, proposition=p, stance=s)
         for p, s in stances
     )
+    audit.record(
+        investigation_id=target.investigation_id,
+        actor=user,
+        action=AuditAction.TARGET_CONTEXT,
+        subject_type=SubjectType.TARGET,
+        subject_id=target.pk,
+        before=None if previous is None else _target_context_state(previous),
+        after=_target_context_state(version),
+    )
     return version
+
+
+def _target_context_state(version: TargetContextVersion) -> dict[str, object]:
+    return {
+        "version": version.version,
+        "note": version.note,
+        "stances": {
+            s.proposition.label: s.stance for s in version.stances.select_related("proposition")
+        },
+    }
 
 
 @transaction.atomic

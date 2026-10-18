@@ -6,6 +6,7 @@ import { errorText } from "../../api/errorText";
 import type { ObservationRef, ObservationTrail } from "../../api/types";
 import { ALIGNMENT_LABELS, STANCE_LABELS, actorLabel, formatDateTime } from "../../analysis/labels";
 import { ErrorMessage } from "../ErrorMessage";
+import { AuditEventItem } from "./AuditEventItem";
 import { CategoryBadge } from "./CategoryBadge";
 
 function Item({ o }: { o: ObservationRef }) {
@@ -23,10 +24,12 @@ export function ObservationDrawer({
   observationId,
   onClose,
   onOpenFinding,
+  onOpenAudit,
 }: {
   observationId: number;
   onClose: () => void;
   onOpenFinding: (id: number) => void;
+  onOpenAudit: (observationId: number) => void;
 }) {
   const [trail, setTrail] = useState<ObservationTrail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -103,6 +106,30 @@ export function ObservationDrawer({
                 </li>
               ))}
             </ul>
+          )}
+          <h4>Riwayat koreksi klasifikasi</h4>
+          {trail.classification_trail.length === 0 ? (
+            <p className="muted">Belum pernah dikoreksi manusia.</p>
+          ) : (
+            <>
+              <ul className="plain">
+                {trail.classification_trail.map((e) => (
+                  <AuditEventItem
+                    key={e.id}
+                    event={e}
+                    onOpenObservation={() => undefined}
+                    onOpenFinding={onOpenFinding}
+                  />
+                ))}
+              </ul>
+              <button
+                type="button"
+                className="link"
+                onClick={() => onOpenAudit(trail.observation.id)}
+              >
+                Buka di jejak audit
+              </button>
+            </>
           )}
           <h4>Temuan yang merujuk observasi ini</h4>
           {trail.finding_ids.length === 0 ? (
