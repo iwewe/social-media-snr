@@ -85,3 +85,7 @@ _assessment.register()
 from . import profiles as _profiles  # noqa: E402 - mendaftarkan m3-profile
 
 _profiles.register()
+
+from . import networks as _networks  # noqa: E402 - mendaftarkan m4-network
+
+_networks.register()
