@@ -21,7 +21,7 @@ DEBUG = _env_bool("DJANGO_DEBUG", False)
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
 if not SECRET_KEY:
     if DEBUG:
-        SECRET_KEY = "dev-only-insecure-key"  # noqa: S105 - hanya aktif saat DJANGO_DEBUG=1
+        SECRET_KEY = "dev-only-insecure-key"  # noqa: S105 secret-scan: allow (hanya DJANGO_DEBUG=1)
     else:
         raise RuntimeError(
             "DJANGO_SECRET_KEY wajib diisi (atau set DJANGO_DEBUG=1 untuk dev lokal)."

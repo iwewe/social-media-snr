@@ -18,3 +18,10 @@ repos:
         files: ^backend/
       - id: ruff-format
         files: ^backend/
+  - repo: local
+    hooks:
+      - id: secret-scan
+        name: pemindai rahasia (cookie/token/kunci)
+        entry: python3 tests/tools/secret_scan.py
+        language: system
+        pass_filenames: true

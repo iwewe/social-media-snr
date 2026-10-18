@@ -98,6 +98,9 @@ docker compose run --rm --no-deps \
   -e E2E_INVESTIGATION="$ANALYSIS_INV" -e E2E_SHOTS=/shots \
   worker-browser python /e2e/analysis_flow.py
 
+echo "-- uji restore (backup -> restore -> verifikasi -> uji negatif) pada data E2E"
+BACKUP_DB="$DB" SNR_EVIDENCE_HOST_DIR="$E2E_DATA/evidence" bash deployment/restore_test.sh
+
 echo "-- tamper_flow (berkas bukti diubah di disk)"
 TARGET_FILE="$(find "$E2E_DATA/evidence" -type f -name 'putaran4.html' | head -1)"
 [ -n "$TARGET_FILE" ] || { echo "berkas DOM bukti tidak ditemukan untuk uji pengubahan"; exit 1; }

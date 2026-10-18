@@ -220,7 +220,7 @@ def _snapshot(name, body):
 
 def test_secret_in_artifact_is_rejected_but_run_still_completes(target, user) -> None:
     clean = _snapshot("ok.html", b"<p>halaman biasa</p>")
-    dirty = _snapshot("bad.html", b"<p>Authorization: Bearer abcdefghijklmnop1234567890</p>")
+    dirty = _snapshot("bad.html", b"<p>Authorization: Bearer abcdefghijklmnop1234567890</p>")  # secret-scan: allow
     use(lambda r: build_result(r, ["r1"], artifacts=[clean, dirty]))
     run, res = go(target, user)
     assert res.status == S.COMPLETED

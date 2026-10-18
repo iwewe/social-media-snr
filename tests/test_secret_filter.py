@@ -108,13 +108,13 @@ def test_secret_containers_are_rejected_by_content_type(ctype: str) -> None:
 
 POSITIVES = {
     "content:private-key": f"<pre>{PEM}\nMIIEvQIBADANBgkq\n</pre>",
-    "content:authorization-header": "GET /x HTTP/1.1\nAuthorization: Bearer abcdef1234567890xyz\n",
+    "content:authorization-header": "GET /x HTTP/1.1\nAuthorization: Bearer abcdef1234567890xyz\n",  # secret-scan: allow
     "content:cookie-header": "HTTP/1.1 200 OK\r\nSet-Cookie: theme=dark_mode_value; Path=/\r\n",
     "content:jwt": f'<script>var t="{JWT}";</script>',
     "content:session-cookie": f"document.cookie = 'sessionid={SESSION_VALUE}; path=/'",
     "content:session-cookie-short": "x; ct0=" + "f" * 32 + "; y",
     "content:credential-in-url": "<a href='https://admin:hunter22pw@intranet.example/panel'>x</a>",
-    "content:token-query-param": '<img src="https://cdn.example/a.png?access_token=abcdef0123456789">',
+    "content:token-query-param": '<img src="https://cdn.example/a.png?access_token=abcdef0123456789">',  # secret-scan: allow
     "content:secret-assignment": 'config = {"client_secret": "abcd1234efgh5678ijkl"}',
     "content:provider-token": f"aws_key = {AWS}",
 }
@@ -223,7 +223,7 @@ def test_a_secret_split_across_chunk_boundaries_is_still_detected() -> None:
 
 def test_a_secret_far_into_a_large_stream_is_found_with_its_offset() -> None:
     filler = b"<p>teks biasa tanpa kredensial</p>\n" * 400
-    parts = [filler] * 30 + [f"Cookie: sid=abcdefgh12345678;".encode()] + [filler] * 5
+    parts = [filler] * 30 + [f"Cookie: sid=abcdefgh12345678;".encode()] + [filler] * 5  # secret-scan: allow
     decision = decide(stream(parts))
     assert not decision.allowed and decision.rule == "content:cookie-header"
     expected = 30 * len(filler)
