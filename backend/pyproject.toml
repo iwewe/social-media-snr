@@ -9,6 +9,7 @@ dependencies = [
     "celery[redis]>=5.4",
     "django-axes>=8",
     "djangorestframework>=3.18.3",
+    "networkx>=3.7",
 ]
 
 [dependency-groups]
@@ -26,6 +27,7 @@ dev = [
     "pyyaml>=6.0.3",
     "types-pyyaml>=6.0.12.20260906",
     "pytest-xdist>=3.8.0",
+    "types-networkx>=3.6.1.20261006",
 ]
 
 [tool.ruff]

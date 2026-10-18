@@ -310,3 +310,76 @@ class ActorIssueProfile(AppendOnlyModel):
 
     def __str__(self) -> str:
         return f"Profil Level {self.level} akun {self.actor_id} ({self.analysis_run_id})"
+
+
+class GraphProjection(AppendOnlyModel):
+    """Satu graf interaksi + tampilan stance untuk SATU platform pada satu AnalysisRun (WP-2.4).
+
+    Menyimpan definisi node/edge, aturan bobot, jendela waktu, parameter, dan metrik struktur
+    beserta seed dan versi pustaka (FR-074). Stance adalah atribut node/edge; stance sama tidak
+    membuat edge.
+    """
+
+    analysis_run = models.OneToOneField(AnalysisRun, on_delete=models.PROTECT, related_name="graph")
+    platform = models.CharField(max_length=20)
+    definition = models.JSONField(help_text="Definisi node/edge, bobot, jendela, parameter.")
+    metrics = models.JSONField(
+        help_text="Metrik struktur + seed + versi; bukan penentu pengendali."
+    )
+    exclusions = models.JSONField(help_text="Relasi yang tidak masuk graf, per alasan.")
+    node_count = models.PositiveIntegerField()
+    edge_count = models.PositiveIntegerField()
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(platform__in=Platform.values), name="graph_platform_valid"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"Graf [{self.platform}] {self.node_count} node, {self.edge_count} edge"
+
+
+class GraphNode(AppendOnlyModel):
+    projection = models.ForeignKey(GraphProjection, on_delete=models.PROTECT, related_name="nodes")
+    actor = models.ForeignKey(ActorAccount, on_delete=models.PROTECT, related_name="+")
+    attributes = models.JSONField(help_text="Atribut node, termasuk stance_counts (M2) bila ada.")
+    metrics = models.JSONField(help_text="Derajat, betweenness, komunitas (struktur saja).")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["projection", "actor"], name="uniq_graph_node"),
+        ]
+
+
+class GraphEdge(AppendOnlyModel):
+    projection = models.ForeignKey(GraphProjection, on_delete=models.PROTECT, related_name="edges")
+    from_node = models.ForeignKey(GraphNode, on_delete=models.PROTECT, related_name="edges_out")
+    to_node = models.ForeignKey(GraphNode, on_delete=models.PROTECT, related_name="edges_in")
+    relation_type = models.CharField(max_length=12)
+    weight = models.PositiveIntegerField()
+    observation_ids = models.JSONField(
+        help_text="Asal edge: ID observasi respons yang membentuknya."
+    )
+    stance_counts = models.JSONField(help_text="Stance respons pembentuk edge (atribut).")
+    first_published_at = models.DateTimeField(null=True, blank=True)
+    last_published_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["projection", "from_node", "to_node", "relation_type"],
+                name="uniq_graph_edge",
+            ),
+            models.CheckConstraint(
+                condition=Q(relation_type__in=["reply_to", "quote_of", "repost_of", "mentions"]),
+                name="graph_edge_type_valid",
+            ),
+            models.CheckConstraint(
+                condition=~Q(from_node=models.F("to_node")), name="graph_edge_no_self"
+            ),
+            models.CheckConstraint(condition=Q(weight__gte=1), name="graph_edge_weight_positive"),
+        ]
+        indexes = [models.Index(fields=["projection", "relation_type"], name="graph_edge_type_idx")]
