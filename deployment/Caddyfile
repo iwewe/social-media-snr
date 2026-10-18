@@ -1,0 +1,36 @@
+# Proxy TLS SNR (WP-3.6b; ADR 0035). Variabel: SNR_DOMAIN (bawaan localhost) dan SNR_TLS:
+#   internal                        -> CA lokal Caddy (bawaan; tanpa domain publik; peramban perlu memercayai CA-nya)
+#   /certs/cert.pem /certs/key.pem  -> sertifikat sendiri (letakkan di SNR_CERTS_DIR, dipasang ke /certs)
+# Caddy otomatis mengalihkan HTTP ke HTTPS dan mengirim X-Forwarded-Proto ke aplikasi.
+{
+	admin off
+}
+
+{$SNR_DOMAIN:localhost} {
+	tls {$SNR_TLS:internal}
+	encode zstd gzip
+
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		Referrer-Policy same-origin
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+	}
+
+	handle /api/* {
+		reverse_proxy web:8000
+	}
+	handle /admin/* {
+		reverse_proxy web:8000
+	}
+	handle /static/* {
+		root * /srv
+		file_server
+	}
+	handle {
+		header Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'"
+		root * /srv/frontend
+		try_files {path} /index.html
+		file_server
+	}
+}

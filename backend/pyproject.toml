@@ -10,6 +10,7 @@ dependencies = [
     "django-axes>=8",
     "djangorestframework>=3.18.3",
     "networkx>=3.7",
+    "gunicorn>=26.2.0",
 ]
 
 [dependency-groups]

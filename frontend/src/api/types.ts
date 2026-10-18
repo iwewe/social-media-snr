@@ -642,3 +642,21 @@ export interface AuditPage {
   results: AuditEvent[];
   notice: string;
 }
+
+export interface EvidenceAccessRow {
+  id: number;
+  at: string;
+  user: string;
+  purpose: "verify" | "verify_run" | "download";
+  purpose_label: string;
+  result: "MATCH" | "MISMATCH" | "MISSING" | "UNREADABLE";
+  artifact: { id: number; kind: string; run_id: number; run_sequence: number };
+}
+
+export interface EvidenceAccessPage {
+  count: number;
+  page: number;
+  page_size: number;
+  results: EvidenceAccessRow[];
+  notice: string;
+}

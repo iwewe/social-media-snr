@@ -160,3 +160,12 @@ class AuditListInput(PageInput):
     subject_id = serializers.IntegerField(min_value=1, required=False)
     actor = serializers.CharField(max_length=150, required=False)
     observation = serializers.IntegerField(min_value=1, required=False)
+
+
+class EvidenceAccessInput(PageInput):
+    purpose = serializers.ChoiceField(choices=["verify", "verify_run", "download"], required=False)
+    result = serializers.ChoiceField(
+        choices=["MATCH", "MISMATCH", "MISSING", "UNREADABLE"], required=False
+    )
+    user = serializers.CharField(max_length=150, required=False)
+    artifact = serializers.IntegerField(min_value=1, required=False)

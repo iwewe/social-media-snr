@@ -77,7 +77,14 @@ describe("AnalysisPage", () => {
   it("menampilkan tiga kategori secara konsisten dan keempat tab", async () => {
     open("OWNER", []);
     await screen.findByText(/Belum ada analisis/);
-    for (const name of ["Respons", "Jaringan", "Profil akun", "Temuan", "Jejak audit"]) {
+    for (const name of [
+      "Respons",
+      "Jaringan",
+      "Profil akun",
+      "Temuan",
+      "Jejak audit",
+      "Akses bukti",
+    ]) {
       expect(screen.getByRole("tab", { name })).toBeInTheDocument();
     }
     expect(screen.getAllByText("Fakta observasi").length).toBeGreaterThan(0);

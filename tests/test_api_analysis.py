@@ -329,6 +329,13 @@ def endpoints(w: World):
     return [
         ("run: daftar", "get", f"/api/investigations/{inv}/analysis-runs/", None, Role.VIEWER),
         ("audit: jejak", "get", f"/api/investigations/{inv}/audit/", None, Role.VIEWER),
+        (
+            "akses bukti",
+            "get",
+            f"/api/investigations/{inv}/evidence-access/",
+            None,
+            Role.VIEWER,
+        ),
         ("run: detail", "get", f"/api/analysis-runs/{m2}/", None, Role.VIEWER),
         ("respons", "get", f"/api/analysis-runs/{m2}/responses/", None, Role.VIEWER),
         (
@@ -467,6 +474,7 @@ def test_the_matrix_covers_every_new_object_route(world) -> None:
         "investigations/<int:pk>/findings/",
         "investigations/<int:pk>/findings/evidence/",
         "investigations/<int:pk>/audit/",
+        "investigations/<int:pk>/evidence-access/",
         "findings/<int:pk>/",
         "findings/<int:pk>/revise/",
         "findings/<int:pk>/endorse/",
@@ -474,7 +482,7 @@ def test_the_matrix_covers_every_new_object_route(world) -> None:
         "observations/<int:pk>/",
     }
     assert new == covered, new ^ covered
-    assert len(endpoints(world)) == 18  # satu entri per rute (daftar/buat memakai rute yang sama)
+    assert len(endpoints(world)) == 19  # satu entri per rute (daftar/buat memakai rute yang sama)
 
 
 # --- run analisis ------------------------------------------------------------------------------------

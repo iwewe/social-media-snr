@@ -766,3 +766,60 @@ def audit_page(
             "dan siklus temuan tercatat beserta pelaku, waktu, nilai sebelum/sesudah, alasan."
         ),
     }
+
+
+# --- akses bukti (WP-3.6b) ---------------------------------------------------------------------
+
+PURPOSE_LABELS = {
+    "verify": "Verifikasi hash satu artefak",
+    "verify_run": "Verifikasi seluruh artefak satu pemeriksaan",
+    "download": "Unduh isi artefak",
+}
+
+
+def evidence_access_page(
+    investigation: Investigation, *, filters: dict[str, Any], page: int, page_size: int
+) -> dict[str, Any]:
+    """Siapa membuka/memverifikasi bukti, kapan, untuk apa, dan hasilnya (NFR-02, PRD bagian 13).
+
+    Sumbernya riwayat verifikasi yang sudah append-only; jalur berkas tidak ditampilkan."""
+    page_size = max(1, min(page_size, MAX_PAGE_SIZE))
+    qs = ArtifactVerification.objects.filter(
+        artifact__run__target__investigation=investigation
+    ).select_related("verified_by", "artifact", "artifact__run")
+    if filters.get("purpose"):
+        qs = qs.filter(purpose=filters["purpose"])
+    if filters.get("result"):
+        qs = qs.filter(result=filters["result"])
+    if filters.get("user"):
+        qs = qs.filter(verified_by__username=filters["user"])
+    if filters.get("artifact") is not None:
+        qs = qs.filter(artifact_id=filters["artifact"])
+    total = qs.count()
+    chunk = list(qs.order_by("-id")[(page - 1) * page_size : page * page_size])
+    return {
+        "count": total,
+        "page": page,
+        "page_size": page_size,
+        "results": [
+            {
+                "id": v.pk,
+                "at": v.verified_at.isoformat(),
+                "user": v.verified_by.get_username(),
+                "purpose": v.purpose,
+                "purpose_label": PURPOSE_LABELS.get(v.purpose, v.purpose),
+                "result": v.result,
+                "artifact": {
+                    "id": v.artifact_id,
+                    "kind": v.artifact.kind,
+                    "run_id": v.artifact.run_id,
+                    "run_sequence": v.artifact.run.sequence,
+                },
+            }
+            for v in chunk
+        ],
+        "notice": (
+            "Riwayat ini hanya dapat bertambah. Hash membuktikan berkas sama dengan saat disimpan, "
+            "bukan keaslian konten platform."
+        ),
+    }

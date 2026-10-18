@@ -6,6 +6,7 @@ import { errorText } from "../api/errorText";
 import type { AnalysisRunInfo, CoordinationRow, InvestigationDetail } from "../api/types";
 import { ErrorMessage } from "../components/ErrorMessage";
 import { AuditPanel, type AuditScope } from "../components/analysis/AuditPanel";
+import { EvidenceAccessPanel } from "../components/analysis/EvidenceAccessPanel";
 import { FindingsPanel } from "../components/analysis/FindingsPanel";
 import { NetworkPanel } from "../components/analysis/NetworkPanel";
 import { ObservationDrawer } from "../components/analysis/ObservationDrawer";
@@ -14,13 +15,14 @@ import { ResponsesPanel } from "../components/analysis/ResponsesPanel";
 import { RoleBadge } from "../components/RoleBadge";
 import { canWrite } from "../team/roles";
 
-type Tab = "responses" | "network" | "profiles" | "findings" | "audit";
+type Tab = "responses" | "network" | "profiles" | "findings" | "audit" | "evidence";
 const TABS: { id: Tab; label: string }[] = [
   { id: "responses", label: "Respons" },
   { id: "network", label: "Jaringan" },
   { id: "profiles", label: "Profil akun" },
   { id: "findings", label: "Temuan" },
   { id: "audit", label: "Jejak audit" },
+  { id: "evidence", label: "Akses bukti" },
 ];
 
 function RunPicker({
@@ -219,6 +221,7 @@ export function AnalysisPage() {
           onOpenFinding={openFinding}
         />
       )}
+      {tab === "evidence" && <EvidenceAccessPanel investigationId={detail.id} />}
       {observation !== null && (
         <ObservationDrawer
           key={observation}

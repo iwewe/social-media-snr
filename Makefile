@@ -1,7 +1,7 @@
 # Perintah pengembangan SNR. Recipe memakai ">" sebagai prefix agar tidak bergantung pada tab.
 .RECIPEPREFIX = >
 .DEFAULT_GOAL := help
-.PHONY: help install lint typecheck migrations test test-backend test-browser test-frontend t fast mutate fmt ci backend-install frontend-install init-data up down logs ps e2e secrets backup restore-test
+.PHONY: help install lint typecheck migrations test test-backend test-browser test-frontend t fast mutate fmt ci backend-install frontend-install init-data up down logs ps e2e secrets backup restore-test tls-check
 
 help: ## Tampilkan daftar perintah
 > @grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -55,7 +55,7 @@ ci: fast test ## Tingkat 1: yang dijalankan CI (lint, typecheck, semua tes) sebe
 > cd frontend && npm run -s build
 
 init-data: ## Buat direktori data lokal (postgres, evidence, profil browser, backup, ekspor)
-> mkdir -p snr-data/data/postgres snr-data/evidence/captures snr-data/evidence/screenshots snr-data/evidence/manifests snr-data/exports snr-data/browser-profiles snr-data/backups
+> mkdir -p snr-data/data/postgres snr-data/evidence/captures snr-data/evidence/screenshots snr-data/evidence/manifests snr-data/exports snr-data/browser-profiles snr-data/backups snr-data/static snr-data/certs
 > chmod 700 snr-data/browser-profiles snr-data/data/postgres
 
 up: init-data ## Jalankan seluruh lingkungan (butuh .env)
@@ -81,3 +81,6 @@ backup: ## Backup lokal (butuh SNR_BACKUP_DIR di perangkat terpisah); lihat docs
 
 restore-test: ## Uji restore terencana: backup -> restore sementara -> verifikasi -> uji negatif
 > bash deployment/restore_test.sh
+
+tls-check: ## Uji HTTPS terisolasi (tumpukan sementara dengan overlay compose.tls.yaml); butuh Docker dan internet
+> bash deployment/tls_check.sh
