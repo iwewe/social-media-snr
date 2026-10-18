@@ -81,3 +81,7 @@ def get_method(name: str) -> Method:
 from . import assessment as _assessment  # noqa: E402 - mendaftarkan m2-rules
 
 _assessment.register()
+
+from . import profiles as _profiles  # noqa: E402 - mendaftarkan m3-profile
+
+_profiles.register()

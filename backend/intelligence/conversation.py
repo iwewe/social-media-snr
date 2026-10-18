@@ -66,6 +66,10 @@ class ConversationIndex:
             if to is not None
         }
 
+    def parent_post_id(self, observation_id: int) -> int | None:
+        node = self.nodes[observation_id]
+        return self._parent_post.get((node.run_id, node.post_id))
+
     def _parent_of(self, node: Node) -> Node | None:
         parent_post = self._parent_post.get((node.run_id, node.post_id))
         if parent_post is None:
