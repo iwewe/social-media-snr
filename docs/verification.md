@@ -7,7 +7,7 @@ yang menjaga integritas; yang dikurangi adalah pengulangan yang tidak menambah k
 
 | Tingkat | Kapan | Perintah | Lama (VM dev) | Isi |
 |---|---|---|---|---|
-| 0 | tiap perubahan | `make fast`, `make t T="../tests/test_x.py -k nama"` | detik sampai ~1 menit | lint + typecheck bersamaan; tes terarah yang sedang ditulis |
+| 0 | tiap perubahan | `make fast`, `make t T="../tests/test_x.py -k nama"` | detik sampai ~1 menit | lint + typecheck + sinkron migrasi (`makemigrations --check`) bersamaan; tes terarah yang sedang ditulis |
 | 1 | sebelum commit/PR | `make ci` | ~4 menit | `fast` + semua tes (backend paralel, browser, frontend bersamaan) |
 | 2 | kode kritis, sebelum PR | `make mutate SPEC=tests/mutation_specs/<spek>.py` | menit | mutasi sengaja: membuktikan tes dapat gagal |
 | 3 | tiap PR (otomatis) | CI GitHub | ~4 menit | semuanya pada lingkungan bersih; dijalankan sambil pekerjaan berikutnya berlanjut |
