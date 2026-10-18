@@ -155,7 +155,7 @@ def frozen_inputs(run: AnalysisRun) -> Frozen:
         for c in run.target_contexts.select_related("context_version")
     }
     issue_version = run.issue_context_version.version if run.issue_context_version else None
-    return Frozen(run.dataset_version.platform, ids, issue_version, contexts)
+    return Frozen(run.dataset_version.platform, ids, issue_version, contexts, run.pk)
 
 
 def execute_run(run: AnalysisRun) -> AnalysisRun:
@@ -167,7 +167,8 @@ def execute_run(run: AnalysisRun) -> AnalysisRun:
         raise InvalidSelection("run ini sudah dijalankan")
     run.refresh_from_db()
     try:
-        output = get_method(run.method).run(frozen_inputs(run), run.parameters)
+        with transaction.atomic():  # baris yang ditulis metode ikut batal bila metode gagal
+            output = get_method(run.method).run(frozen_inputs(run), run.parameters)
         done = {
             "status": AnalysisStatus.COMPLETED,
             "output": output,

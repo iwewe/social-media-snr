@@ -7,6 +7,8 @@ konteks atau data
 baru tidak mengubah run lama (AT-07); analisis ulang membuat DatasetVersion dan AnalysisRun baru.
 """
 
+from enum import StrEnum
+
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
@@ -18,8 +20,11 @@ from investigations.models import (
     CollectionTarget,
     Investigation,
     IssueContextVersion,
+    Proposition,
     TargetContextVersion,
 )
+
+from .m2.taxonomy import IssueStance, NarrativeFunction, Sentiment, TargetAlignment
 
 _HEX64 = r"^[0-9a-f]{64}$"
 
@@ -172,3 +177,97 @@ class AnalysisRunTargetContext(AppendOnlyModel):
         constraints = [
             models.UniqueConstraint(fields=["run", "target"], name="uniq_run_target_context"),
         ]
+
+
+class AssessmentSource(models.TextChoices):
+    MACHINE = "MACHINE", "MACHINE"
+    HUMAN = "HUMAN", "HUMAN"
+
+
+def _values(enum: type[StrEnum]) -> list[str]:
+    return [m.value for m in enum]
+
+
+class ResponseAssessment(AppendOnlyModel):
+    """Penilaian M2 atas satu respons terhadap satu proposition (FR-050..FR-057; PRD 8, 11.2).
+
+    Append-only. Hasil mesin ditulis saat AnalysisRun RUNNING; koreksi manusia adalah baris BARU
+    yang menggantikan (`supersedes`) baris sebelumnya dengan pelaku dan alasan; hasil mesin tidak
+    pernah ditimpa (FR-055, AT-16). `basis` memuat dasar yang dapat diperiksa (cue cocok, rujukan
+    observasi, rantai induk).
+    """
+
+    analysis_run = models.ForeignKey(
+        AnalysisRun, on_delete=models.PROTECT, related_name="assessments"
+    )
+    observation = models.ForeignKey(PostObservation, on_delete=models.PROTECT, related_name="+")
+    proposition = models.ForeignKey(Proposition, on_delete=models.PROTECT, related_name="+")
+    issue_stance = models.CharField(max_length=12)
+    target_alignment = models.CharField(max_length=8)
+    expression_sentiment = models.CharField(max_length=10, null=True, blank=True)  # noqa: DJ001 - NULL = tidak dinilai
+    response_character = models.JSONField(help_text="Daftar kode RC-xx (multi-label).")
+    narrative_function = models.CharField(max_length=30, null=True, blank=True)  # noqa: DJ001 - NULL = tidak dinilai
+    needs_human_review = models.BooleanField(default=False)
+    basis = models.JSONField(help_text="Dasar/alasan yang dapat diperiksa dan rujukan observasi.")
+    source = models.CharField(max_length=7, choices=AssessmentSource.choices)
+    supersedes = models.OneToOneField(
+        "self", on_delete=models.PROTECT, null=True, blank=True, related_name="superseded_by"
+    )
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    review_reason = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        ordering = ["analysis_run_id", "observation_id", "proposition_id", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["analysis_run", "observation", "proposition"],
+                condition=Q(source="MACHINE"),
+                name="uniq_machine_assessment",
+            ),
+            models.CheckConstraint(
+                condition=Q(issue_stance__in=_values(IssueStance)), name="assessment_stance_valid"
+            ),
+            models.CheckConstraint(
+                condition=Q(target_alignment__in=_values(TargetAlignment)),
+                name="assessment_alignment_valid",
+            ),
+            models.CheckConstraint(
+                condition=Q(expression_sentiment__isnull=True)
+                | Q(expression_sentiment__in=_values(Sentiment)),
+                name="assessment_sentiment_valid",
+            ),
+            models.CheckConstraint(
+                condition=Q(narrative_function__isnull=True)
+                | Q(narrative_function__in=_values(NarrativeFunction)),
+                name="assessment_narrative_valid",
+            ),
+            models.CheckConstraint(
+                condition=Q(source__in=_values(AssessmentSource)), name="assessment_source_valid"
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(source="MACHINE")
+                    & Q(supersedes__isnull=True)
+                    & Q(reviewed_by__isnull=True)
+                    & Q(review_reason="")
+                )
+                | (
+                    Q(source="HUMAN")
+                    & Q(supersedes__isnull=False)
+                    & Q(reviewed_by__isnull=False)
+                    & ~Q(review_reason="")
+                ),
+                name="assessment_source_consistent",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["analysis_run", "observation"], name="assessment_run_obs_idx")
+        ]
+
+    def __str__(self) -> str:
+        return (
+            f"{self.source} {self.issue_stance}/{self.target_alignment} obs {self.observation_id}"
+        )
