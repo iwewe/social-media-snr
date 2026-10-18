@@ -463,3 +463,128 @@ class CoordinationEdge(AppendOnlyModel):
             ),
         ]
         indexes = [models.Index(fields=["network", "indicator"], name="coordination_indicator_idx")]
+
+
+class Finding(AppendOnlyModel):
+    """Temuan analitik yang sudah ditinjau manusia (tingkat 4; PRD 11.5; FR-077..FR-080).
+
+    Isi tidak dapat diubah setelah disegel; revisi = Finding baru yang menggantikan (`supersedes`),
+    sehingga sejarah utuh. Siklus hidup (disahkan/ditarik) ada pada `FindingReview` append-only.
+    Confidence BUKAN probabilitas akun adalah buzzer; teks dijaga dari vonis operasi berbayar/aktor
+    pengendali. Tertaut ke observasi, AnalysisRun, dan indikator yang mendasarinya.
+    """
+
+    investigation = models.ForeignKey(
+        Investigation, on_delete=models.PROTECT, related_name="findings"
+    )
+    platform = models.CharField(max_length=20)
+    title = models.CharField(max_length=200)
+    statement = models.TextField(help_text="Pola yang terobservasi, tanpa vonis.")
+    interpretation = models.TextField(help_text="Interpretasi peninjau.")
+    confidence = models.CharField(max_length=14)
+    confidence_reason = models.TextField(help_text="Alasan confidence (wajib).")
+    evidence_quality = models.JSONField(help_text="Empat sumbu bukti: level, alasan, saran sistem.")
+    alternatives = models.JSONField(help_text="Pertimbangan hipotesis alternatif.")
+    independent_evidence_groups = models.PositiveIntegerField(null=True, blank=True)
+    synthetic_data = models.BooleanField(default=False)
+    notice = models.TextField()
+    supersedes = models.OneToOneField(
+        "self", on_delete=models.PROTECT, null=True, blank=True, related_name="superseded_by"
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+    sealed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["investigation_id", "-id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(platform__in=Platform.values), name="finding_platform_valid"
+            ),
+            models.CheckConstraint(
+                condition=Q(confidence__in=["HIGH", "MODERATE", "LOW", "NOT_ASSESSABLE"]),
+                name="finding_confidence_valid",
+            ),
+            models.CheckConstraint(
+                condition=~Q(statement="")
+                & ~Q(interpretation="")
+                & ~Q(confidence_reason="")
+                & ~Q(title=""),
+                name="finding_text_required",
+            ),
+            models.CheckConstraint(
+                condition=Q(supersedes__isnull=True) | ~Q(supersedes=models.F("id")),
+                name="finding_not_self_superseding",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"Temuan {self.pk}: {self.title}"
+
+
+class FindingRun(AppendOnlyModel):
+    """AnalysisRun (versi analisis) yang mendasari temuan."""
+
+    finding = models.ForeignKey(Finding, on_delete=models.PROTECT, related_name="runs")
+    analysis_run = models.ForeignKey(AnalysisRun, on_delete=models.PROTECT, related_name="+")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["finding", "analysis_run"], name="uniq_finding_run"),
+        ]
+
+
+class FindingObservation(AppendOnlyModel):
+    """Observasi (bukti tingkat 1) yang mendasari temuan; harus anggota dataset salah satu run."""
+
+    finding = models.ForeignKey(Finding, on_delete=models.PROTECT, related_name="observations")
+    observation = models.ForeignKey(PostObservation, on_delete=models.PROTECT, related_name="+")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["finding", "observation"], name="uniq_finding_observation"
+            ),
+        ]
+
+
+class FindingIndicator(AppendOnlyModel):
+    """Indikator koordinasi (tingkat 3) yang ditinjau dan ditafsirkan oleh temuan."""
+
+    finding = models.ForeignKey(Finding, on_delete=models.PROTECT, related_name="indicators")
+    edge = models.ForeignKey(CoordinationEdge, on_delete=models.PROTECT, related_name="+")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["finding", "edge"], name="uniq_finding_indicator"),
+        ]
+
+
+class ReviewAction(models.TextChoices):
+    ENDORSE = "ENDORSE", "ENDORSE"
+    WITHDRAW = "WITHDRAW", "WITHDRAW"
+
+
+class FindingReview(AppendOnlyModel):
+    """Pengesahan atau penarikan temuan oleh manusia. Append-only; satu per jenis aksi."""
+
+    finding = models.ForeignKey(Finding, on_delete=models.PROTECT, related_name="reviews")
+    action = models.CharField(max_length=8, choices=ReviewAction.choices)
+    reviewer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+"
+    )
+    note = models.TextField()
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["finding", "action"], name="uniq_finding_review_action"
+            ),
+            models.CheckConstraint(
+                condition=Q(action__in=ReviewAction.values), name="finding_review_action_valid"
+            ),
+            models.CheckConstraint(condition=~Q(note=""), name="finding_review_note_required"),
+        ]
