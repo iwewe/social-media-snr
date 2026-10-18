@@ -20,3 +20,6 @@ class CollectionConfig(AppConfig):
             register_simulated_adapter(
                 registry, settings.SNR_SIMULATION_BASE_URL, settings.SNR_SIMULATION_PLATFORM
             )
+        from .adapters import register_disabled_adapters
+
+        register_disabled_adapters(registry)

@@ -360,13 +360,19 @@ def test_adapter_is_absent_unless_the_datasets_directory_is_configured(inv, user
 def test_app_ready_registers_adapters_only_when_configured(settings) -> None:
     from django.apps import apps
 
+    from collection.adapters.pending import PendingPermissionAdapter
+
     registry.clear()
     settings.SNR_FIXTURE_DATASETS_DIR = None
     apps.get_app_config("collection").ready()
-    assert registry.platforms() == []
+    # Tanpa konfigurasi: hanya adapter platform yang DINONAKTIFKAN (WP-3.0), tidak ada adapter dataset.
+    assert registry.platforms() == sorted(p.value for p in Platform)
+    assert all(isinstance(registry.get(p), PendingPermissionAdapter) for p in Platform)
+    registry.clear()
     settings.SNR_FIXTURE_DATASETS_DIR = SAMPLES
     apps.get_app_config("collection").ready()
     assert registry.platforms() == sorted(p.value for p in Platform)
+    assert not any(isinstance(registry.get(p), PendingPermissionAdapter) for p in Platform)
 
 
 _ = (copy, InspectionRun)

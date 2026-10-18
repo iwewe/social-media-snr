@@ -81,7 +81,8 @@ def test_storage_roots_are_only_touched_by_the_storage_layer(setting: str) -> No
 
 def test_platform_list_matches_the_adapter_packages(modules: set[str]) -> None:
     adapters = {m.split(".")[2] for m in modules if m.startswith("collection.adapters.")}
-    assert adapters == set(PLATFORMS)
+    # `pending` adalah dasar bersama adapter nonaktif (WP-3.0), bukan paket platform.
+    assert adapters - {"pending"} == set(PLATFORMS)
 
 
 def test_unchecked_policy_is_never_used_by_production_code() -> None:
