@@ -1,7 +1,7 @@
 # Perintah pengembangan SNR. Recipe memakai ">" sebagai prefix agar tidak bergantung pada tab.
 .RECIPEPREFIX = >
 .DEFAULT_GOAL := help
-.PHONY: help install lint typecheck migrations test test-backend test-browser test-frontend t fast mutate fmt ci backend-install frontend-install init-data up down logs ps e2e secrets backup restore-test tls-check
+.PHONY: help install lint typecheck migrations test test-backend test-browser test-frontend t fast mutate fmt ci backend-install frontend-install init-data up down logs ps e2e secrets backup restore-test tls-check demo demo-down
 
 help: ## Tampilkan daftar perintah
 > @grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -84,3 +84,9 @@ restore-test: ## Uji restore terencana: backup -> restore sementara -> verifikas
 
 tls-check: ## Uji HTTPS terisolasi (tumpukan sementara dengan overlay compose.tls.yaml); butuh Docker dan internet
 > bash deployment/tls_check.sh
+
+demo: ## Demo web dengan data SINTETIS di database terpisah snr_demo (akun acak di ~/snr-demo/credentials.txt)
+> bash deployment/demo.sh up
+
+demo-down: ## Hentikan demo dan hapus database snr_demo
+> bash deployment/demo.sh down
