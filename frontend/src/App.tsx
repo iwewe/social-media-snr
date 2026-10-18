@@ -1,6 +1,7 @@
 import { Link, Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 
 import { useAuth } from "./auth/context";
+import { AnalysisPage } from "./pages/AnalysisPage";
 import { InvestigationPage } from "./pages/InvestigationPage";
 import { InvestigationsPage } from "./pages/InvestigationsPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -44,6 +45,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route path="/" element={<InvestigationsPage />} />
         <Route path="/investigations/:id" element={<InvestigationPage />} />
+        <Route path="/investigations/:id/analysis" element={<AnalysisPage />} />
         <Route path="/inspections/:id" element={<RunPage />} />
         <Route path="/users" element={<UsersPage />} />
       </Route>

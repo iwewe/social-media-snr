@@ -375,3 +375,129 @@ td select {
 .emph {
   font-weight: 700;
 }
+
+/* analisis I2 (WP-2.7) */
+.badge.category[data-category="observed_fact"] {
+  border-color: #2f6f4f;
+  color: #2f6f4f;
+}
+.badge.category[data-category="machine_result"] {
+  border-color: #6a5acd;
+  color: #6a5acd;
+}
+.badge.category[data-category="human_reviewed"] {
+  border-color: #b8860b;
+  color: #b8860b;
+}
+.badge.category[data-category="reviewed_finding"] {
+  border-color: #1b4f8a;
+  color: #1b4f8a;
+  font-weight: 600;
+}
+.badge.warning {
+  border-color: #c0392b;
+  color: #c0392b;
+}
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0.75rem 0;
+  flex-wrap: wrap;
+}
+.tabs button[data-active="true"] {
+  font-weight: 700;
+  text-decoration: underline;
+}
+.filters {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: end;
+  margin: 0.5rem 0;
+}
+.filters label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+}
+.graph-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20rem;
+  gap: 1rem;
+}
+@media (max-width: 800px) {
+  .graph-layout {
+    grid-template-columns: 1fr;
+  }
+}
+.graph-canvas {
+  height: 28rem;
+  border: 1px solid var(--border, #ccc);
+  border-radius: 4px;
+}
+.legend {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+}
+.swatch {
+  display: inline-block;
+  width: 1.5rem;
+  height: 0;
+  border-top: 3px solid;
+  vertical-align: middle;
+  margin-right: 0.25rem;
+}
+.swatch.dashed {
+  border-top-style: dashed;
+}
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(28rem, 100vw);
+  overflow: auto;
+  background: var(--bg, #fff);
+  border-left: 1px solid var(--border, #ccc);
+  padding: 1rem;
+  z-index: 10;
+}
+.link {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.plain {
+  list-style: none;
+  padding: 0;
+}
+.plain li {
+  margin: 0.35rem 0;
+}
+.basis {
+  font-size: 0.85rem;
+}
+.inline-form {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: end;
+}
+.pager {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin: 0.5rem 0;
+}
+label.inline {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin-right: 0.75rem;
+}

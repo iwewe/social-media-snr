@@ -303,3 +303,309 @@ export interface ObservationPage {
   reconciled: boolean;
   results: ObservationRow[];
 }
+
+// --- Analisis I2 (WP-2.7): respons M2, graf M4, indikator, profil M3, temuan M5, jejak bukti ---
+
+/** Empat kategori tampilan (FR-094). */
+export type Category = "observed_fact" | "machine_result" | "human_reviewed" | "reviewed_finding";
+
+export interface TierInfo {
+  tier: 1 | 2 | 3 | 4;
+  tier_name: string;
+  tier_label: string;
+  category: Category;
+  category_label: string;
+}
+
+export interface AnalysisRunInfo {
+  id: number;
+  method: string;
+  method_version: string;
+  status: "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
+  created_at: string;
+  created_by: string;
+  dataset: {
+    id: number;
+    number: number;
+    platform: Platform;
+    observation_count: number;
+    digest: string;
+  };
+  previous_run: number | null;
+  tier: TierInfo | null;
+}
+
+export interface ActorRef {
+  id: number;
+  handle: string | null;
+  display_name: string | null;
+  external_actor_id: string | null;
+}
+
+export interface ObservationRef {
+  id: number;
+  external_post_id: string | null;
+  type: string;
+  text: string | null;
+  published_at: string | null;
+  observed_at: string;
+  run_id: number;
+  author: ActorRef | null;
+}
+
+export type IssueStance = "PRO" | "CONTRA" | "MIXED" | "NEUTRAL" | "UNDETERMINED" | "NOT_RELEVANT";
+export type Alignment = "SUPPORT" | "OPPOSE" | "UNCLEAR";
+
+export interface ResponseLabels {
+  issue_stance: IssueStance;
+  target_alignment: Alignment;
+  expression_sentiment: string | null;
+  response_character: { code: string; name: string }[];
+  narrative_function: string | null;
+}
+
+export interface ParentTurn {
+  observation_id: number;
+  text: string | null;
+  stance: IssueStance | null;
+  author: ActorRef | null;
+}
+
+export interface ResponseRow extends TierInfo {
+  assessment_id: number;
+  proposition: { id: number; label: string };
+  observation: ObservationRef;
+  parent_chain: ParentTurn[];
+  parent_unknown: boolean;
+  labels: ResponseLabels;
+  source: "MACHINE" | "HUMAN";
+  needs_human_review: boolean;
+  basis: {
+    method: string | null;
+    rules: string[];
+    matched: Record<string, unknown> | null;
+    changed: Record<string, [unknown, unknown]> | null;
+    evidence: unknown;
+  };
+  review: { by: string; reason: string; at: string } | null;
+  versions: number;
+  artifact_ids: number[];
+}
+
+export interface ResponsesPage {
+  run: AnalysisRunInfo;
+  proposition: { id: number };
+  results: ResponseRow[];
+  total: number;
+  page: number;
+  page_size: number;
+  notice: string;
+}
+
+export interface GraphNodeData {
+  id: number;
+  label: string;
+  actor: ActorRef;
+  attributes: {
+    observations?: number;
+    responses_assessed?: number;
+    stance_counts?: Record<string, number>;
+    stance_summary?: "PRO" | "CONTRA" | "MIXED" | "UNDETERMINED";
+  };
+  metrics: Record<string, number | undefined>;
+}
+
+export interface GraphEdgeData {
+  id: number;
+  kind: "interaction";
+  source: number;
+  target: number;
+  type: "reply_to" | "quote_of" | "repost_of" | "mentions";
+  weight: number;
+  observation_ids: number[];
+  stance_counts: Record<string, number>;
+  first_published_at: string | null;
+  last_published_at: string | null;
+}
+
+export interface GraphPayload extends TierInfo {
+  run: AnalysisRunInfo;
+  platform: Platform;
+  definition: Record<string, unknown>;
+  metrics: {
+    note?: string;
+    community_detection?: {
+      status: string;
+      communities?: number;
+      modularity?: number | null;
+      stability?: {
+        seeds: number;
+        distinct_partitions: number;
+        mean_rand_index_vs_first: number;
+        min_rand_index_vs_first: number;
+        note: string;
+      };
+    };
+  } & Record<string, unknown>;
+  exclusions: Record<string, number>;
+  filters: Record<string, unknown>;
+  nodes: GraphNodeData[];
+  edges: GraphEdgeData[];
+  total_nodes: number;
+  truncated: boolean;
+  notice: string | null;
+}
+
+export interface CoordinationRow {
+  id: number;
+  kind: "behavioral_similarity";
+  indicator: string;
+  variant: string;
+  actor_a: ActorRef;
+  actor_b: ActorRef;
+  value: number;
+  support: number;
+  explanation: string;
+  detail: Record<string, unknown>;
+  baseline: {
+    status?: string;
+    permutations?: number;
+    p_max_ge?: number | null;
+    baseline_p95_of_max?: number | null;
+    exceeds_baseline_p95?: boolean;
+  };
+  overlaps_with: string[];
+  observation_ids: number[];
+  evidence_truncated: boolean;
+  alternative_hypotheses: string[];
+}
+
+export interface CoordinationPage extends TierInfo {
+  run: AnalysisRunInfo;
+  platform: Platform;
+  notice: string;
+  alternative_hypotheses: string[];
+  baseline: Record<string, unknown>;
+  exclusions: Record<string, number>;
+  results: CoordinationRow[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface DimensionResult {
+  status: "OK" | "INSUFFICIENT_DATA";
+  reason?: string;
+  observed?: number;
+  required_minimum?: number;
+  [key: string]: unknown;
+}
+
+export interface ProfileSummary {
+  id: number;
+  actor: ActorRef;
+  level: string;
+  participation: DimensionResult & { responses?: number; distinct_targets?: number };
+  coverage_statement: string;
+  partial_coverage: boolean;
+}
+
+export interface ProfilesPage extends TierInfo {
+  run: AnalysisRunInfo;
+  results: ProfileSummary[];
+  total: number;
+  page: number;
+  page_size: number;
+  notice: string;
+}
+
+export interface ProfileDetail extends TierInfo {
+  id: number;
+  run: AnalysisRunInfo;
+  actor: ActorRef;
+  platform: Platform;
+  proposition_id: number;
+  level: string;
+  period: { start: string; end: string };
+  coverage: {
+    statement: string;
+    partial_coverage: boolean;
+    targets_covered: number[];
+    targets_in_investigation: number[];
+    incomplete_runs: { run: number; status: string }[];
+    responses_without_known_time: number;
+    responses_excluded_outside_period: number;
+    responses_without_author: number;
+  };
+  dimensions: Record<string, DimensionResult>;
+}
+
+export type FindingStatus = "DRAFT" | "ENDORSED" | "WITHDRAWN" | "SUPERSEDED";
+export type ConfidenceLevel = "HIGH" | "MODERATE" | "LOW" | "NOT_ASSESSABLE";
+
+export interface FindingSummary extends TierInfo {
+  id: number;
+  title: string;
+  status: FindingStatus;
+  confidence: ConfidenceLevel;
+  synthetic_data: boolean;
+  platform: Platform;
+  created_by: string;
+  created_at: string;
+  supersedes: number | null;
+  superseded_by: number | null;
+}
+
+export interface EvidenceAxis {
+  level: "GOOD" | "ACCEPTABLE" | "POOR" | "NOT_ASSESSABLE";
+  reason: string;
+  override_reason: string;
+  system_suggestion: { level: string; reason: string };
+}
+
+export interface FindingDetail extends FindingSummary {
+  statement: string;
+  interpretation: string;
+  confidence_reason: string;
+  evidence_quality: Record<string, EvidenceAxis | Record<string, unknown>>;
+  alternatives: Record<string, { outcome: string; reasoning: string }>;
+  alternative_titles: Record<string, string>;
+  independent_evidence_groups: number | null;
+  notice: string;
+  history: { id: number; status: FindingStatus; created_at: string }[];
+  reviews: { action: "ENDORSE" | "WITHDRAW"; reviewer: string; note: string; at: string }[];
+  runs: AnalysisRunInfo[];
+  observation_count: number;
+  observations: ObservationRef[];
+  indicator_ids: number[];
+}
+
+export interface ObservationTrail extends TierInfo {
+  observation: ObservationRef;
+  parent_chain: ObservationRef[];
+  run: { id: number; sequence: number; status: string; target_id: number; source_method: string };
+  artifacts: {
+    id: number;
+    kind: string;
+    content_type: string;
+    size_bytes: number;
+    sha256: string;
+    post_specific: boolean;
+    last_verification: { result: string; at: string } | null;
+  }[];
+  assessments: {
+    assessment_id: number;
+    analysis_run_id: number;
+    labels: ResponseLabels;
+    source: "MACHINE" | "HUMAN";
+    category: Category;
+    category_label: string;
+  }[];
+  finding_ids: number[];
+}
+
+export interface EvidenceSuggestion {
+  axes: string[];
+  facts: { synthetic: boolean } & Record<string, unknown>;
+  suggestions: Record<string, { level: string; reason: string }>;
+}
