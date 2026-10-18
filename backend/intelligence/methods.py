@@ -24,6 +24,7 @@ class Frozen:
     observation_ids: tuple[int, ...]
     issue_context_version: int | None
     target_context_versions: dict[int, int | None]
+    run_id: int
 
 
 @dataclass(frozen=True)
@@ -75,3 +76,8 @@ def get_method(name: str) -> Method:
         return REGISTRY[name]
     except KeyError:
         raise UnknownMethod(f"metode analisis tidak dikenal: {name}") from None
+
+
+from . import assessment as _assessment  # noqa: E402 - mendaftarkan m2-rules
+
+_assessment.register()

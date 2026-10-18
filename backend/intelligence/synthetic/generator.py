@@ -435,9 +435,7 @@ def _build_target(cfg: TargetConfig, seed: int) -> list[_Entry]:
                 rng.randint(3 * 3600, 40 * 3600),
                 f"Ini laporan lengkapnya {ORGANIC_SHARED_URL}",
                 seed_key,
-                _truth(
-                    PRO, _alignment(PRO, cfg.seed_stance), ["RC-01"], group="organic-shared-url"
-                ),
+                _truth(UNDETERMINED, UNCLEAR, ["RC-10"], group="organic-shared-url"),
                 "organik-tautan-populer",
             )
 
@@ -454,7 +452,7 @@ def _build_target(cfg: TargetConfig, seed: int) -> list[_Entry]:
             offset,
             _coordinated_text(rng, with_url=rng.random() < 0.7),
             seed_key,
-            _truth(UNDETERMINED, UNCLEAR, ["RC-08"], group="coordinated-planted"),
+            _truth(UNDETERMINED, UNCLEAR, ["RC-10"], group="coordinated-planted"),
             "pola-ditanam-K",
         )
         entries.append(
