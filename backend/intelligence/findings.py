@@ -13,6 +13,8 @@ from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
+from audit import services as audit
+from audit.models import AuditAction, SubjectType
 from collection.models import InspectionRun, PostObservation
 from investigations.models import Investigation
 from preservation.models import ArtifactVerification, EvidenceArtifact, VerificationResult
@@ -309,6 +311,31 @@ def draft_finding(
         Finding.objects.filter(pk=finding.pk, sealed_at__isnull=True).update(
             sealed_at=timezone.now()
         )
+        audit.record(
+            investigation_id=investigation.pk,
+            actor=by,
+            action=AuditAction.FINDING_DRAFT if supersedes is None else AuditAction.FINDING_REVISE,
+            subject_type=SubjectType.FINDING,
+            subject_id=finding.pk,
+            before=None
+            if supersedes is None
+            else {
+                "finding_id": supersedes.pk,
+                "title": supersedes.title,
+                "confidence": supersedes.confidence,
+                "status": finding_status(supersedes),
+            },
+            after={
+                "finding_id": finding.pk,
+                "title": title,
+                "confidence": chosen_confidence.value,
+                "status": FindingState.DRAFT,
+                "analysis_run_ids": sorted(r.pk for r in runs),
+                "observation_count": len(obs_ids),
+                "synthetic_data": evaluation["facts"]["synthetic"],
+            },
+            reason=reason,
+        )
     finding.refresh_from_db()
     return finding
 
@@ -333,6 +360,21 @@ def finding_status(finding: Finding) -> str:
     return FindingState.DRAFT
 
 
+def _audit_review(
+    finding: Finding, by: User, action: AuditAction, old_status: str, new_status: str, note: str
+) -> None:
+    audit.record(
+        investigation_id=finding.investigation_id,
+        actor=by,
+        action=action,
+        subject_type=SubjectType.FINDING,
+        subject_id=finding.pk,
+        before={"finding_id": finding.pk, "status": old_status},
+        after={"finding_id": finding.pk, "status": new_status},
+        reason=note,
+    )
+
+
 def endorse_finding(*, finding: Finding, by: User, note: str) -> FindingReview:
     """Sahkan temuan: wajib seluruh hipotesis alternatif sudah dipertimbangkan (FR-077)."""
     note = _require("catatan pengesahan", note)
@@ -345,22 +387,36 @@ def endorse_finding(*, finding: Finding, by: User, note: str) -> FindingReview:
         )
     try:
         with transaction.atomic():
-            return FindingReview.objects.create(
+            review = FindingReview.objects.create(
                 finding=finding, action=ReviewAction.ENDORSE, reviewer=by, note=note
             )
+            _audit_review(
+                finding,
+                by,
+                AuditAction.FINDING_ENDORSE,
+                FindingState.DRAFT,
+                FindingState.ENDORSED,
+                note,
+            )
+            return review
     except IntegrityError as exc:
         raise InvalidFinding("temuan ini sudah ditinjau") from exc
 
 
 def withdraw_finding(*, finding: Finding, by: User, note: str) -> FindingReview:
     note = _require("alasan penarikan", note)
-    if finding_status(finding) == FindingState.WITHDRAWN:
+    old_status = finding_status(finding)
+    if old_status == FindingState.WITHDRAWN:
         raise InvalidFinding("temuan sudah ditarik")
     try:
         with transaction.atomic():
-            return FindingReview.objects.create(
+            review = FindingReview.objects.create(
                 finding=finding, action=ReviewAction.WITHDRAW, reviewer=by, note=note
             )
+            _audit_review(
+                finding, by, AuditAction.FINDING_WITHDRAW, old_status, FindingState.WITHDRAWN, note
+            )
+            return review
     except IntegrityError as exc:
         raise InvalidFinding("temuan sudah ditarik") from exc
 

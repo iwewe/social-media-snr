@@ -29,6 +29,7 @@ from .access import (
 from .base import ApiView
 from .serializers import (
     AssessmentReviewInput,
+    AuditListInput,
     CoordinationInput,
     FindingInput,
     FindingNoteInput,
@@ -246,3 +247,14 @@ class ObservationDetailView(ApiView):
         return Response(
             analysis.observation_detail(observation_for(_user(request), pk, Role.VIEWER))
         )
+
+
+# --- jejak audit ----------------------------------------------------------------------------------
+
+
+class AuditListView(ApiView):
+    def get(self, request: Request, pk: int) -> Response:
+        inv = investigation_for(_user(request), pk, Role.VIEWER)
+        query = _query(AuditListInput, request)
+        page, size = query.pop("page"), query.pop("page_size")
+        return Response(analysis.audit_page(inv, filters=query, page=page, page_size=size))

@@ -112,4 +112,5 @@ urlpatterns = [
     path("findings/<int:pk>/endorse/", av.FindingEndorseView.as_view(), name="finding-endorse"),
     path("findings/<int:pk>/withdraw/", av.FindingWithdrawView.as_view(), name="finding-withdraw"),
     path("observations/<int:pk>/", av.ObservationDetailView.as_view(), name="observation"),
+    path("investigations/<int:pk>/audit/", av.AuditListView.as_view(), name="audit"),
 ]

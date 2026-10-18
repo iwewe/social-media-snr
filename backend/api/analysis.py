@@ -11,6 +11,7 @@ from typing import Any
 
 from django.db.models import Q, QuerySet
 
+from audit.models import AuditAction, AuditEvent, SubjectType
 from collection.models import InspectionRun, PostObservation
 from intelligence import findings as fs
 from intelligence.assessment import assessment_history, current_assessments
@@ -26,6 +27,7 @@ from intelligence.models import (
     GraphNode,
     ResponseAssessment,
 )
+from investigations.models import Investigation
 from preservation.models import ArtifactVerification, EvidenceArtifact
 
 MAX_PAGE_SIZE = 200
@@ -690,6 +692,16 @@ def observation_detail(o: PostObservation) -> dict[str, Any]:
     finding_ids = list(
         Finding.objects.filter(observations__observation=o).values_list("pk", flat=True).distinct()
     )
+    classification_trail = [
+        audit_event_repr(e)
+        for e in AuditEvent.objects.filter(
+            investigation_id=run.target.investigation_id,
+            subject_type=SubjectType.RESPONSE_ASSESSMENT,
+            after__observation_id=o.pk,
+        )
+        .select_related("actor")
+        .order_by("-id")[:50]
+    ]
     return {
         "observation": observation_ref(o, labels),
         "parent_chain": [observation_ref(p, labels) for p in chain],
@@ -703,5 +715,54 @@ def observation_detail(o: PostObservation) -> dict[str, Any]:
         "artifacts": artifacts,
         "assessments": assessments,
         "finding_ids": finding_ids,
+        "classification_trail": classification_trail,
         **tier_repr(ResultTier.OBSERVED_EVIDENCE, OBSERVED),
+    }
+
+
+# --- jejak audit (WP-2.8) ---------------------------------------------------------------------
+
+
+def audit_event_repr(e: AuditEvent) -> dict[str, Any]:
+    return {
+        "id": e.pk,
+        "at": e.occurred_at.isoformat(),
+        "actor": e.actor.get_username(),
+        "action": e.action,
+        "action_label": AuditAction(e.action).label,
+        "subject_type": e.subject_type,
+        "subject_type_label": SubjectType(e.subject_type).label,
+        "subject_id": e.subject_id,
+        "before": e.before,
+        "after": e.after,
+        "reason": e.reason,
+    }
+
+
+def audit_page(
+    investigation: Investigation, *, filters: dict[str, Any], page: int, page_size: int
+) -> dict[str, Any]:
+    page_size = max(1, min(page_size, MAX_PAGE_SIZE))
+    qs = AuditEvent.objects.filter(investigation=investigation).select_related("actor")
+    for key in ("action", "subject_type", "subject_id"):
+        if filters.get(key) is not None:
+            qs = qs.filter(**{key: filters[key]})
+    if filters.get("actor"):
+        qs = qs.filter(actor__username=filters["actor"])
+    if filters.get("observation") is not None:
+        qs = qs.filter(
+            subject_type=SubjectType.RESPONSE_ASSESSMENT,
+            after__observation_id=filters["observation"],
+        )
+    total = qs.count()
+    chunk = list(qs.order_by("-id")[(page - 1) * page_size : page * page_size])
+    return {
+        "count": total,
+        "page": page,
+        "page_size": page_size,
+        "results": [audit_event_repr(e) for e in chunk],
+        "notice": (
+            "Jejak ini hanya dapat bertambah: setiap perubahan konteks, tinjauan klasifikasi, "
+            "dan siklus temuan tercatat beserta pelaku, waktu, nilai sebelum/sesudah, alasan."
+        ),
     }

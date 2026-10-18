@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "collection",
     "preservation",
     "intelligence",
+    "audit",
 ]
 
 MIDDLEWARE = [

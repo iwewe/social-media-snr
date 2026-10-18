@@ -168,10 +168,14 @@ function ReviewForm({
 export function ResponsesPanel({
   run,
   canReview,
+  actorId,
+  onClearActor,
   onOpenObservation,
 }: {
   run: AnalysisRunInfo;
   canReview: boolean;
+  actorId: number | null;
+  onClearActor: () => void;
   onOpenObservation: (id: number) => void;
 }) {
   const [filters, setFilters] = useState<Filters>(NO_FILTERS);
@@ -181,7 +185,7 @@ export function ResponsesPanel({
   const [reviewing, setReviewing] = useState<number | null>(null);
 
   const load = useCallback(() => {
-    const qs = queryString({ ...filters, page, page_size: PAGE_SIZE });
+    const qs = queryString({ ...filters, actor: actorId, page, page_size: PAGE_SIZE });
     api
       .get<ResponsesPage>(`/api/analysis-runs/${run.id}/responses/${qs}`)
       .then((d) => {
@@ -189,7 +193,7 @@ export function ResponsesPanel({
         setError(null);
       })
       .catch((e: unknown) => setError(errorText(e)));
-  }, [run.id, filters, page]);
+  }, [run.id, filters, actorId, page]);
 
   useEffect(load, [load]);
 
@@ -269,6 +273,14 @@ export function ResponsesPanel({
           </select>
         </label>
       </fieldset>
+      {actorId !== null && (
+        <p data-actor-filter>
+          Hanya respons satu akun (dari graf).{" "}
+          <button type="button" className="link" onClick={onClearActor}>
+            tampilkan semua
+          </button>
+        </p>
+      )}
       <ErrorMessage error={error} />
       {!data && !error && <p className="muted">Memuat respons...</p>}
       {data && (

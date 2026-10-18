@@ -14,6 +14,8 @@ from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
 from django.db.models import QuerySet
 
+from audit import services as audit
+from audit.models import AuditAction, SubjectType
 from investigations.models import Proposition, TargetPropositionStance
 
 from .conversation import Chain, ConversationIndex
@@ -260,7 +262,7 @@ def review_assessment(
     evidence = (assessment.basis or {}).get("evidence")
     try:
         with transaction.atomic():
-            return ResponseAssessment.objects.create(
+            reviewed = ResponseAssessment.objects.create(
                 analysis_run=assessment.analysis_run,
                 observation=assessment.observation,
                 proposition=assessment.proposition,
@@ -277,6 +279,26 @@ def review_assessment(
                 review_reason=reason,
                 **fields,
             )
+            audit.record(
+                investigation_id=assessment.analysis_run.investigation_id,
+                actor=by,
+                action=AuditAction.CLASSIFICATION_REVIEW,
+                subject_type=SubjectType.RESPONSE_ASSESSMENT,
+                subject_id=reviewed.pk,
+                before={
+                    "assessment_id": assessment.pk,
+                    **{k: v[0] for k, v in changed.items()},
+                },
+                after={
+                    "assessment_id": reviewed.pk,
+                    "observation_id": assessment.observation_id,
+                    "analysis_run_id": assessment.analysis_run_id,
+                    "proposition_id": assessment.proposition_id,
+                    **{k: v[1] for k, v in changed.items()},
+                },
+                reason=reason,
+            )
+            return reviewed
     except IntegrityError as exc:
         raise AlreadyReviewed("Penilaian ini sudah digantikan oleh tinjauan lain.") from exc
 

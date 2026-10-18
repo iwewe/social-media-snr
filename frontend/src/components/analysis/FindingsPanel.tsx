@@ -39,6 +39,7 @@ export function FindingsPanel({
   selected,
   focusId,
   onOpenObservation,
+  onOpenAudit,
 }: {
   investigationId: number;
   runs: AnalysisRunInfo[];
@@ -46,6 +47,7 @@ export function FindingsPanel({
   selected: CoordinationRow[];
   focusId: number | null;
   onOpenObservation: (id: number) => void;
+  onOpenAudit: (subjectId: number) => void;
 }) {
   const [list, setList] = useState<FindingSummary[] | null>(null);
   const [detail, setDetail] = useState<FindingDetail | null>(null);
@@ -299,6 +301,9 @@ export function FindingsPanel({
               </button>
             </div>
           )}
+          <button type="button" className="link" onClick={() => onOpenAudit(detail.id)}>
+            Jejak audit temuan ini
+          </button>{" "}
           <button type="button" onClick={() => setDetail(null)}>
             Tutup detail
           </button>
