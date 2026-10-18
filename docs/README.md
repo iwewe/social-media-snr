@@ -7,3 +7,4 @@
 - [`adapter-contract.md`](adapter-contract.md): panduan menulis adapter dan kontraknya.
 - [`operations.md`](operations.md): backup, restore, uji restore, retensi (kerangka), dan rahasia.
 - [`adapters/`](adapters/README.md): kelayakan dan izin per platform (WP-3.0) dan status adapter.
+- [`pilot/`](pilot/protokol-pilot.md): protokol pilot (WP-4.1) dan kerangka hasil validasi (belum dilaksanakan).
