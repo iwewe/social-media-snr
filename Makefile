@@ -1,7 +1,7 @@
 # Perintah pengembangan SNR. Recipe memakai ">" sebagai prefix agar tidak bergantung pada tab.
 .RECIPEPREFIX = >
 .DEFAULT_GOAL := help
-.PHONY: help install lint typecheck migrations test test-backend test-browser test-frontend t fast mutate fmt ci backend-install frontend-install init-data up down logs ps e2e
+.PHONY: help install lint typecheck migrations test test-backend test-browser test-frontend t fast mutate fmt ci backend-install frontend-install init-data up down logs ps e2e secrets backup restore-test
 
 help: ## Tampilkan daftar perintah
 > @grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -17,6 +17,7 @@ frontend-install: ## Pasang dependensi frontend (npm ci)
 lint: ## Lint backend (ruff) dan frontend (oxlint), cek format
 > cd backend && uv run ruff check . && uv run ruff format --check .
 > cd frontend && npm run -s lint && npm run -s format:check
+> python3 tests/tools/secret_scan.py
 
 typecheck: ## Type-check backend (mypy) dan frontend (tsc)
 > cd backend && DJANGO_SECRET_KEY=ci-only-not-a-secret uv run mypy .
@@ -71,3 +72,12 @@ ps: ## Status layanan
 
 e2e: ## E2E browser (Playwright) pada database terpisah; butuh stack hidup (make up)
 > bash deployment/e2e.sh
+
+secrets: ## Pindai berkas yang dilacak git untuk cookie/token/kunci (PRD bagian 13)
+> python3 tests/tools/secret_scan.py
+
+backup: ## Backup lokal (butuh SNR_BACKUP_DIR di perangkat terpisah); lihat docs/operations.md
+> bash deployment/backup.sh
+
+restore-test: ## Uji restore terencana: backup -> restore sementara -> verifikasi -> uji negatif
+> bash deployment/restore_test.sh
