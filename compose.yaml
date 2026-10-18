@@ -63,6 +63,7 @@ services:
       - ./backend:/app
       - ./tests:/tests
       - ./compose.yaml:/compose.yaml:ro  # dibaca tes isolasi
+      - ./docs:/docs:ro  # dibaca tes dokumen kelayakan adapter (WP-3.0)
       - ./.env.example:/.env.example:ro  # dibaca tes konfigurasi penyapu
       - ./datasets:/datasets:ro  # dataset uji/impor (WP-1.7); dibaca tes dan adapter dataset
       - ${SNR_HOST_DATA:-./snr-data}/evidence:/srv/snr/evidence

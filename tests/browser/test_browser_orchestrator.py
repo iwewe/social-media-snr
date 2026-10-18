@@ -153,14 +153,20 @@ def test_celery_task_runs_a_browser_run_eagerly(inv, user) -> None:
 def test_app_ready_registers_the_simulation_adapter_only_when_configured(settings, sim_server) -> None:
     from django.apps import apps
 
+    from collection.adapters.pending import PendingPermissionAdapter
+
     registry.clear()
     settings.SNR_SIMULATION_BASE_URL = None
     apps.get_app_config("collection").ready()
-    assert registry.platforms() == []
+    # Tanpa simulasi: hanya adapter nonaktif (WP-3.0).
+    assert all(isinstance(registry.get(p), PendingPermissionAdapter) for p in Platform)
+    registry.clear()
     settings.SNR_SIMULATION_BASE_URL = sim_server.base_url
     settings.SNR_SIMULATION_PLATFORM = "tiktok"
     apps.get_app_config("collection").ready()
-    assert registry.platforms() == ["tiktok"]
+    assert not isinstance(registry.get(Platform.TIKTOK), PendingPermissionAdapter)
+    others = [p for p in Platform if p is not Platform.TIKTOK]
+    assert all(isinstance(registry.get(p), PendingPermissionAdapter) for p in others)
 
 
 _ = InspectionRun

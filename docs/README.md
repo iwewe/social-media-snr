@@ -6,3 +6,4 @@
 - [`decisions/`](decisions/): catatan keputusan teknis (satu berkas per keputusan).
 - [`adapter-contract.md`](adapter-contract.md): panduan menulis adapter dan kontraknya.
 - [`operations.md`](operations.md): backup, restore, uji restore, retensi (kerangka), dan rahasia.
+- [`adapters/`](adapters/README.md): kelayakan dan izin per platform (WP-3.0) dan status adapter.
