@@ -9,6 +9,8 @@ repos:
       - id: trailing-whitespace
         args: ["--markdown-linebreak-ext=md"]
       - id: check-yaml
+        # compose.tls.yaml memakai tag Compose `!reset` (bukan YAML standar); divalidasi docker compose config.
+        exclude: ^compose\.tls\.yaml$
       - id: check-merge-conflict
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.17.1

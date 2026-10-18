@@ -41,6 +41,29 @@ yang diubah terdeteksi), bersih-bersih. Lakukan sebelum pilot dan setiap kali fo
 | 2026-10-19 | Data E2E (`make e2e`): 2 artefak bukti, seluruh model domain | Lulus: restore setia (jumlah baris dan katalog sama, hash semua berkas cocok); checksum backup rusak ditolak; berkas bukti yang diubah terdeteksi |
 | 2026-10-19 | Database demo sintetis (3 target x 4 putaran, seluruh rantai analisis dan audit; tanpa artefak berkas) | Lulus: jumlah baris semua model domain sama; checksum backup rusak ditolak; uji berkas bukti dilewati karena sumber tidak punya artefak |
 
+## HTTPS (TLS)
+
+```
+cp .env.example .env   # isi DJANGO_SECRET_KEY, POSTGRES_PASSWORD, SNR_DOMAIN, DJANGO_ALLOWED_HOSTS, DJANGO_CSRF_TRUSTED_ORIGINS
+docker compose -f compose.yaml -f compose.tls.yaml --profile build run --rm frontend-build
+docker compose -f compose.yaml -f compose.tls.yaml up -d --build
+make tls-check          # uji terisolasi (tumpukan sementara, port 8443/8080)
+```
+
+- Proxy Caddy mengakhiri TLS dan mengalihkan HTTP ke HTTPS. `SNR_TLS=internal` memakai CA lokal Caddy (impor CA-nya
+  ke peramban); untuk sertifikat sendiri taruh `cert.pem` dan `key.pem` di `SNR_CERTS_DIR` dan set
+  `SNR_TLS="/certs/cert.pem /certs/key.pem"`.
+- Port diikat ke `127.0.0.1` (ubah `SNR_BIND_ADDR` hanya dengan sengaja). HSTS: mulai `SNR_HSTS_SECONDS=3600`,
+  naikkan bertahap setelah HTTPS stabil.
+- Perubahan `compose.yaml` biasa (stack dev) tidak terpengaruh; frontend dev hanya dengan `--profile dev`.
+
+## Akses bukti dan izin berkas
+
+- Siapa mengunduh atau memverifikasi bukti: tab "Akses bukti" pada halaman analisis (API
+  `GET /api/investigations/{id}/evidence-access/`).
+- Periksa izin berkas data lokal: `docker compose exec web python manage.py check_data_permissions --backup-dir <dir>`
+  (laporan saja; kebijakan: evidence read-only dan tertutup bagi other, browser-profiles dan backup hanya pemilik).
+
 ## Retensi dan penghapusan (kerangka)
 
 Belum ada keputusan durasi. Sampai ada keputusan: tidak ada penghapusan otomatis; data investigasi bersifat

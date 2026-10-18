@@ -146,6 +146,28 @@ AXES_LOCKOUT_PARAMETERS = [["ip_address", "username"]]
 AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_CALLABLE = "api.lockout.lockout_response"
 
+# --- HTTPS di belakang proxy TLS (WP-3.6b). Aktif hanya dengan SNR_HTTPS=1; dev tak berubah ---
+# Proxy (deployment/Caddyfile) mengakhiri TLS dan mengirim X-Forwarded-Proto. HSTS: awal usulan
+# 1 jam; naikkan bertahap setelah HTTPS terbukti stabil (SNR_HSTS_SECONDS). Tanpa preload/subdomain.
+SNR_HTTPS = _env_bool("SNR_HTTPS", False)
+if SNR_HTTPS:
+    if DEBUG:
+        raise RuntimeError("SNR_HTTPS=1 tidak boleh dipakai bersama DJANGO_DEBUG=1.")
+    if not ALLOWED_HOSTS or "*" in ALLOWED_HOSTS:
+        raise RuntimeError("SNR_HTTPS=1 mewajibkan DJANGO_ALLOWED_HOSTS eksplisit (tanpa '*').")
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = int(os.environ.get("SNR_HSTS_SECONDS", "3600"))
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    # Pengalihan HTTP -> HTTPS dilakukan proxy; di Django tetap dimatikan agar health check internal
+    # (HTTP polos dari kontainer) tidak dialihkan.
+    SECURE_SSL_REDIRECT = False
+    # Sengaja (ADR 0035): pengalihan dilakukan proxy (W008); subdomain dan preload HSTS tidak
+    # diaktifkan karena domain deployment belum ditetapkan dan preload hampir tidak dapat dibatalkan
+    # (W005, W021).
+    SILENCED_SYSTEM_CHECKS = ["security.W005", "security.W008", "security.W021"]
+
 # --- API untuk frontend (WP-0.5) ---
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["api.auth.SessionAuth401"],

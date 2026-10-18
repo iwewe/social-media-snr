@@ -243,6 +243,7 @@ def test_the_endpoint_table_covers_every_object_endpoint() -> None:
         "investigations/<int:pk>/findings/",
         "investigations/<int:pk>/findings/evidence/",
         "investigations/<int:pk>/audit/",
+        "investigations/<int:pk>/evidence-access/",
         "findings/<int:pk>/",
         "findings/<int:pk>/revise/",
         "findings/<int:pk>/endorse/",

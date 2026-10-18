@@ -31,6 +31,7 @@ from .serializers import (
     AssessmentReviewInput,
     AuditListInput,
     CoordinationInput,
+    EvidenceAccessInput,
     FindingInput,
     FindingNoteInput,
     GraphInput,
@@ -258,3 +259,13 @@ class AuditListView(ApiView):
         query = _query(AuditListInput, request)
         page, size = query.pop("page"), query.pop("page_size")
         return Response(analysis.audit_page(inv, filters=query, page=page, page_size=size))
+
+
+class EvidenceAccessView(ApiView):
+    def get(self, request: Request, pk: int) -> Response:
+        inv = investigation_for(_user(request), pk, Role.VIEWER)
+        query = _query(EvidenceAccessInput, request)
+        page, size = query.pop("page"), query.pop("page_size")
+        return Response(
+            analysis.evidence_access_page(inv, filters=query, page=page, page_size=size)
+        )
