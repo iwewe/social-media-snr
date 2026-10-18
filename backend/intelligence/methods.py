@@ -89,3 +89,7 @@ _profiles.register()
 from . import networks as _networks  # noqa: E402 - mendaftarkan m4-network
 
 _networks.register()
+
+from . import coordination_runs as _coordination_runs  # noqa: E402 - mendaftarkan co-indicators
+
+_coordination_runs.register()

@@ -383,3 +383,83 @@ class GraphEdge(AppendOnlyModel):
             models.CheckConstraint(condition=Q(weight__gte=1), name="graph_edge_weight_positive"),
         ]
         indexes = [models.Index(fields=["projection", "relation_type"], name="graph_edge_type_idx")]
+
+
+class CoordinationNetwork(AppendOnlyModel):
+    """Behavioral Coordination Network untuk SATU platform pada satu AnalysisRun (WP-2.5; FR-072).
+
+    Tabel dan tampilan terpisah dari Interaction Network: tepi di sini adalah INDIKATOR terhitung,
+    bukan interaksi. Bukan Finding (FR-077): wajib ditinjau manusia dan dibandingkan dengan
+    hipotesis alternatif. Menyimpan parameter eksplisit, baseline, dan pengecualian.
+    """
+
+    analysis_run = models.OneToOneField(
+        AnalysisRun, on_delete=models.PROTECT, related_name="coordination"
+    )
+    platform = models.CharField(max_length=20)
+    definition = models.JSONField(help_text="Parameter eksplisit, aturan indikator, dan catatan.")
+    baseline = models.JSONField(help_text="Ringkasan baseline permutasi, atau NOT_COMPUTED.")
+    exclusions = models.JSONField(help_text="Respons/peristiwa yang tidak dihitung, per alasan.")
+    pair_summary = models.JSONField(
+        help_text="Per pasangan: indikator dan kelompok bukti independen."
+    )
+    responses_considered = models.PositiveIntegerField()
+    events = models.PositiveIntegerField()
+    edge_count = models.PositiveIntegerField()
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(platform__in=Platform.values), name="coordination_platform_valid"
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"Koordinasi [{self.platform}] {self.edge_count} indikator"
+
+
+class CoordinationEdge(AppendOnlyModel):
+    """Satu indikator untuk satu pasangan akun (a < b): nilai, dukungan, bukti, baseline."""
+
+    network = models.ForeignKey(CoordinationNetwork, on_delete=models.PROTECT, related_name="edges")
+    actor_a = models.ForeignKey(ActorAccount, on_delete=models.PROTECT, related_name="+")
+    actor_b = models.ForeignKey(ActorAccount, on_delete=models.PROTECT, related_name="+")
+    indicator = models.CharField(max_length=5)
+    variant = models.CharField(max_length=10, blank=True, default="")
+    value = models.FloatField()
+    support = models.PositiveIntegerField()
+    observation_ids = models.JSONField(help_text="Bukti: ID observasi (dibatasi evidence_limit).")
+    evidence_truncated = models.BooleanField(default=False)
+    detail = models.JSONField()
+    explanation = models.TextField()
+    baseline = models.JSONField()
+    overlaps_with = models.JSONField(help_text="Indikator lain yang berbagi bukti (dependen).")
+    alternative_hypotheses = models.JSONField()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["network", "actor_a", "actor_b", "indicator", "variant"],
+                name="uniq_coordination_edge",
+            ),
+            models.CheckConstraint(
+                condition=Q(indicator__in=["CO-01", "CO-02", "CO-03", "CO-04", "CO-05", "CO-06"]),
+                name="coordination_indicator_valid",
+            ),
+            models.CheckConstraint(
+                condition=(Q(indicator="CO-05") & Q(variant__in=["url", "phrase"]))
+                | (~Q(indicator="CO-05") & Q(variant="")),
+                name="coordination_variant_valid",
+            ),
+            models.CheckConstraint(
+                condition=Q(actor_a__lt=models.F("actor_b")), name="coordination_pair_ordered"
+            ),
+            models.CheckConstraint(
+                condition=Q(support__gte=1), name="coordination_support_positive"
+            ),
+            models.CheckConstraint(
+                condition=Q(value__gte=0), name="coordination_value_nonnegative"
+            ),
+        ]
+        indexes = [models.Index(fields=["network", "indicator"], name="coordination_indicator_idx")]

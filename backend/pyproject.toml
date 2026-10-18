@@ -43,6 +43,7 @@ ignore = ["S101"]
 "tests/**" = ["S105", "S106"]
 # PRNG berseed untuk data uji deterministik, bukan kriptografi
 "intelligence/synthetic/**" = ["S311"]
+"intelligence/m4/baseline.py" = ["S311"]  # permutasi berseed, bukan kriptografi
 
 [tool.mypy]
 python_version = "3.13"
