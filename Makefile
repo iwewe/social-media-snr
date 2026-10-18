@@ -1,7 +1,7 @@
 # Perintah pengembangan SNR. Recipe memakai ">" sebagai prefix agar tidak bergantung pada tab.
 .RECIPEPREFIX = >
 .DEFAULT_GOAL := help
-.PHONY: help install lint typecheck test test-backend test-browser test-frontend t fast mutate fmt ci backend-install frontend-install init-data up down logs ps e2e
+.PHONY: help install lint typecheck migrations test test-backend test-browser test-frontend t fast mutate fmt ci backend-install frontend-install init-data up down logs ps e2e
 
 help: ## Tampilkan daftar perintah
 > @grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -44,8 +44,11 @@ fmt: ## Rapikan format kode
 > cd backend && uv run ruff check --fix . && uv run ruff format .
 > cd frontend && npm run -s format
 
-fast: ## Tingkat 0: lint + typecheck bersamaan (tanpa tes); jalankan terus saat menulis kode
-> $(MAKE) -j2 -Otarget lint typecheck
+migrations: ## Pastikan model dan migrasi sinkron (sama seperti langkah CI)
+> docker compose run --rm -T web python manage.py makemigrations --check --dry-run
+
+fast: ## Tingkat 0: lint + typecheck + sinkron migrasi bersamaan (tanpa tes); jalankan terus saat menulis kode
+> $(MAKE) -j3 -Otarget lint typecheck migrations
 
 ci: fast test ## Tingkat 1: yang dijalankan CI (lint, typecheck, semua tes) sebelum commit/PR
 > cd frontend && npm run -s build

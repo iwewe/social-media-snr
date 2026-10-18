@@ -25,7 +25,7 @@ class Migration(migrations.Migration):
                 ('number', models.PositiveIntegerField(help_text='Nomor urut per investigasi.')),
                 ('observation_count', models.PositiveIntegerField()),
                 ('observation_digest', models.CharField(help_text='SHA-256 atas ID observasi terurut (bukan bukti keaslian).', max_length=64)),
-                ('selection', models.JSONField(help_text='Cara memilih: run dan target yang dipakai; untuk jejak, bukan untuk membangun ulang.')),
+                ('selection', models.JSONField(help_text='Cara memilih (run dan target); untuk jejak, bukan untuk membangun ulang.')),
                 ('note', models.CharField(blank=True, default='', max_length=500)),
                 ('created_at', models.DateTimeField(default=django.utils.timezone.now, editable=False)),
                 ('sealed_at', models.DateTimeField(blank=True, null=True)),
