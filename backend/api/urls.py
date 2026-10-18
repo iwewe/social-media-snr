@@ -1,5 +1,6 @@
 from django.urls import path
 
+from . import analysis_views as av
 from . import views
 
 app_name = "api"
@@ -69,4 +70,46 @@ urlpatterns = [
         views.TargetContextReviseView.as_view(),
         name="target-context",
     ),
+    path(
+        "investigations/<int:pk>/analysis-runs/",
+        av.AnalysisRunListView.as_view(),
+        name="analysis-runs",
+    ),
+    path("analysis-runs/<int:pk>/", av.AnalysisRunDetailView.as_view(), name="analysis-run"),
+    path(
+        "analysis-runs/<int:pk>/responses/",
+        av.AnalysisResponsesView.as_view(),
+        name="analysis-responses",
+    ),
+    path(
+        "assessments/<int:pk>/review/", av.AssessmentReviewView.as_view(), name="assessment-review"
+    ),
+    path(
+        "assessments/<int:pk>/history/",
+        av.AssessmentHistoryView.as_view(),
+        name="assessment-history",
+    ),
+    path("analysis-runs/<int:pk>/graph/", av.AnalysisGraphView.as_view(), name="analysis-graph"),
+    path(
+        "analysis-runs/<int:pk>/coordination/",
+        av.AnalysisCoordinationView.as_view(),
+        name="analysis-coordination",
+    ),
+    path(
+        "analysis-runs/<int:pk>/profiles/",
+        av.AnalysisProfilesView.as_view(),
+        name="analysis-profiles",
+    ),
+    path("profiles/<int:pk>/", av.ProfileDetailView.as_view(), name="profile"),
+    path("investigations/<int:pk>/findings/", av.FindingListCreateView.as_view(), name="findings"),
+    path(
+        "investigations/<int:pk>/findings/evidence/",
+        av.FindingEvidenceView.as_view(),
+        name="finding-evidence",
+    ),
+    path("findings/<int:pk>/", av.FindingDetailView.as_view(), name="finding"),
+    path("findings/<int:pk>/revise/", av.FindingReviseView.as_view(), name="finding-revise"),
+    path("findings/<int:pk>/endorse/", av.FindingEndorseView.as_view(), name="finding-endorse"),
+    path("findings/<int:pk>/withdraw/", av.FindingWithdrawView.as_view(), name="finding-withdraw"),
+    path("observations/<int:pk>/", av.ObservationDetailView.as_view(), name="observation"),
 ]
