@@ -12,7 +12,9 @@ import {
   buildElements,
   buildLegend,
   edgeSummary,
+  incompatibility,
   similarityTitle,
+  type CoordinationSource,
 } from "../../analysis/graphElements";
 import {
   INDICATOR_LABELS,
@@ -84,6 +86,7 @@ export function NetworkPanel({
 
   useEffect(() => {
     if (!coRunId) return;
+    let cancelled = false; // jawaban basi dari run indikator lama tidak boleh menimpa pilihan baru
     const qs = queryString({
       indicator,
       beyond_baseline: beyond ? "true" : "",
@@ -92,22 +95,57 @@ export function NetworkPanel({
     });
     api
       .get<CoordinationPage>(`/api/analysis-runs/${coRunId}/coordination/${qs}`)
-      .then((c) => setCoordination(c))
-      .catch((e: unknown) => setError(errorText(e)));
+      .then((c) => {
+        if (!cancelled) setCoordination(c);
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) setError(errorText(e));
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [coRunId, indicator, beyond, minSupport]);
 
-  const showSimilarity = coRunId !== 0 && coordination !== null;
+  // Indikator hanya digabung bila dataset dan platformnya sama dengan graf aktif (FR-081).
+  const source = useMemo<CoordinationSource | null>(
+    () =>
+      coordination
+        ? { platform: coordination.platform, datasetId: coordination.run.dataset.id }
+        : null,
+    [coordination],
+  );
+  const mismatch = graph && source && coRunId !== 0 ? incompatibility(graph, source) : null;
+  const showSimilarity = coRunId !== 0 && coordination !== null && mismatch === null;
   const view = useMemo(
     () =>
       graph
         ? buildElements(graph, showSimilarity ? (coordination?.results ?? []) : [], {
             showSimilarity,
+            coordination: source ?? undefined,
           })
         : null,
-    [graph, coordination, showSimilarity],
+    [graph, coordination, source, showSimilarity],
   );
   const legend = useMemo(() => buildLegend({ showSimilarity }), [showSimilarity]);
   const onSelect = useCallback((s: GraphSelection | null) => setSelection(s), []);
+
+  // Hanya run indikator pada dataset yang sama dengan graf aktif yang ditawarkan (FR-081).
+  const activeGraphRun = graphRuns.find((r) => r.id === graphRunId);
+  const compatibleRuns = coordinationRuns.filter(
+    (r) => activeGraphRun !== undefined && r.dataset.id === activeGraphRun.dataset.id,
+  );
+  const hiddenRuns = coordinationRuns.length - compatibleRuns.length;
+  // Mengganti graf mengosongkan indikator lama agar hasil dua cakupan tidak tercampur.
+  const changeGraphRun = (id: number) => {
+    setGraphRunId(id);
+    setCoRunId(0);
+    setCoordination(null);
+    setSelection(null);
+  };
+  const changeCoordinationRun = (id: number) => {
+    setCoRunId(id);
+    setCoordination(null);
+  };
   const toggleType = (t: string) =>
     setTypes((cur) => (cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t]));
 
@@ -142,7 +180,7 @@ export function NetworkPanel({
             <select
               aria-label="Analisis jaringan"
               value={graphRunId}
-              onChange={(e) => setGraphRunId(Number(e.target.value))}
+              onChange={(e) => changeGraphRun(Number(e.target.value))}
             >
               {graphRuns.map((r) => (
                 <option key={r.id} value={r.id}>
@@ -207,17 +245,17 @@ export function NetworkPanel({
             }
           />
         </label>
-        {coordinationRuns.length > 0 && (
+        {compatibleRuns.length > 0 && (
           <>
             <label>
               Edge kesamaan perilaku (indikator)
               <select
                 aria-label="Analisis indikator"
                 value={coRunId}
-                onChange={(e) => setCoRunId(Number(e.target.value))}
+                onChange={(e) => changeCoordinationRun(Number(e.target.value))}
               >
                 <option value={0}>Tidak ditampilkan</option>
-                {coordinationRuns.map((r) => (
+                {compatibleRuns.map((r) => (
                   <option key={r.id} value={r.id}>
                     Run #{r.id} (dataset {r.dataset.number})
                   </option>
@@ -264,6 +302,17 @@ export function NetworkPanel({
           </>
         )}
       </fieldset>
+      {hiddenRuns > 0 && (
+        <p className="muted" data-hidden-coordination>
+          {hiddenRuns} analisis indikator pada dataset lain tidak ditawarkan: hasil dua dataset
+          (atau platform) tidak digabung dalam satu graf.
+        </p>
+      )}
+      {mismatch && (
+        <p className="message" data-level="warning" role="alert" data-incompatible>
+          {mismatch} Indikator tidak ditampilkan.
+        </p>
+      )}
       <ErrorMessage error={error} />
       {!graph && !error && <p className="muted">Memuat graf...</p>}
       {graph && view && (

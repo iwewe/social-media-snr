@@ -34,11 +34,39 @@ function similarityId(row: CoordinationRow): string {
   return `s${row.id}`;
 }
 
+/** Asal indikator kesamaan perilaku: harus berasal dari dataset (dan platform) yang sama dengan graf. */
+export interface CoordinationSource {
+  platform: string;
+  datasetId: number;
+}
+
+export class IncompatibleAnalysisError extends Error {}
+
+/** null bila indikator boleh digabung ke graf; selain itu alasan penolakan (isolasi platform, FR-081). */
+export function incompatibility(graph: GraphPayload, source: CoordinationSource): string | null {
+  if (graph.platform !== source.platform) {
+    return `Indikator berasal dari platform ${source.platform}, sedangkan graf dari platform ${graph.platform}; hasil lintas platform tidak digabung.`;
+  }
+  if (graph.run.dataset.id !== source.datasetId) {
+    return "Indikator berasal dari dataset yang berbeda dari graf; cakupannya berbeda dan tidak digabung dalam satu tampilan.";
+  }
+  return null;
+}
+
 export function buildElements(
   graph: GraphPayload,
   indicators: CoordinationRow[],
-  options: { showSimilarity: boolean },
+  options: { showSimilarity: boolean; coordination?: CoordinationSource },
 ): GraphView {
+  if (options.showSimilarity && indicators.length > 0) {
+    if (!options.coordination) {
+      throw new IncompatibleAnalysisError(
+        "Asal indikator tidak diketahui; tidak digabung ke graf.",
+      );
+    }
+    const reason = incompatibility(graph, options.coordination);
+    if (reason) throw new IncompatibleAnalysisError(reason);
+  }
   const elements: CyElement[] = [];
   const known = new Set<number>();
   for (const n of graph.nodes) {
