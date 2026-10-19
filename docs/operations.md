@@ -64,6 +64,27 @@ make tls-check          # uji terisolasi (tumpukan sementara, port 8443/8080)
 - Periksa izin berkas data lokal: `docker compose exec web python manage.py check_data_permissions --backup-dir <dir>`
   (laporan saja; kebijakan: evidence read-only dan tertutup bagi other, browser-profiles dan backup hanya pemilik).
 
+## Sesi operator pada profil browser
+
+Sesuai keputusan organisasi, pemeriksaan memakai sesi login milik operator. Sesi disimpan hanya pada profil browser
+(`browser-profiles/<platform>`, izin 700), terpisah dari bukti dan di luar backup.
+
+```
+# impor cookie hasil ekspor browser (JSON); isi dibaca dari stdin supaya tidak ada berkas tersisa
+docker compose run --rm -T worker-browser python manage.py browser_session import --platform x --file - < cookies.json
+docker compose run --rm worker-browser python manage.py browser_session status --platform x
+docker compose run --rm worker-browser python manage.py browser_session clear --platform x
+```
+
+- Nilai cookie tidak pernah dicetak atau dilog; yang tampil hanya jumlah, nama, dan tanggal kedaluwarsa paling awal.
+- Hanya cookie milik domain platform yang diterima; cookie situs lain dalam berkas ekspor dibuang dan dihitung.
+- Cookie sesi (tanpa kedaluwarsa) tidak bertahan saat Chromium ditutup; impor memberinya umur `--session-days`
+  (bawaan 7 hari, 0 = tidak diubah). Setelah itu sesi harus diperbarui oleh operator.
+- Hapus berkas ekspor cookie setelah impor (`--delete-source` bila memakai berkas). Jangan menempelkan cookie ke
+  percakapan, Git, atau log.
+- Mengimpor sesi tidak menjawab apakah memakainya diizinkan; itu keputusan organisasi per platform
+  (`docs/adapters/keputusan-organisasi.md`).
+
 ## Retensi dan penghapusan (kerangka)
 
 Belum ada keputusan durasi. Sampai ada keputusan: tidak ada penghapusan otomatis; data investigasi bersifat

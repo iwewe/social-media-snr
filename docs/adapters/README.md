@@ -35,3 +35,5 @@ kontrak dan uji AT-13/AT-14 untuk adapter itu, lalu (5) pembaruan dokumen platfo
 
 Impor dataset (format di `docs/format-dataset-impor.md`) tetap menjadi jalur yang tersedia untuk semua platform
 selama data berasal dari sumber yang sah; pencatatan sumbernya ada pada `source_method` observasi.
+
+Uji adapter X: lihat [x-rekaman-halaman.md](x-rekaman-halaman.md) (rekaman halaman ditangkap operator, dianonimkan sebelum masuk Git).
