@@ -250,3 +250,105 @@ def test_not_relevant_only_when_the_response_is_purely_diversion_or_promotion() 
         Character.TOPIC_DIVERSION,
         Character.INFORMATION_REQUEST,
     }
+
+
+def _no_negation(params):
+    params = copy.deepcopy(params)
+    del params["negation_cues"], params["negation_window"]
+    return params
+
+
+def test_negation_before_a_stance_cue_flags_review_but_keeps_the_stance() -> None:
+    text = "Tidak benar bahwa perusahaan harus diaudit"
+    a = classify(text, ())
+    assert a.issue_stance is IssueStance.PRO
+    assert a.needs_human_review is True
+    assert "review:negation_near_stance_cue" in a.basis["rules"]
+    assert a.basis["matched"]["negation"] == [
+        {"cue": "harus diaudit", "class": "pro", "negation": ["tidak"]}
+    ]
+
+
+def test_without_negation_parameters_behaviour_is_unchanged() -> None:
+    a = classify("Tidak benar bahwa perusahaan harus diaudit", (), params=_no_negation(PARAMS))
+    assert a.issue_stance is IssueStance.PRO
+    assert a.needs_human_review is False
+    assert "negation" not in a.basis["matched"]
+    validate_parameters(_no_negation(PARAMS))
+
+
+def test_negation_inside_the_cue_itself_is_not_flagged() -> None:
+    a = classify("Perusahaan tidak perlu diaudit", ())
+    assert a.issue_stance is IssueStance.CONTRA
+    assert a.needs_human_review is False
+
+
+def test_negation_window_boundary_is_exact() -> None:
+    params = copy.deepcopy(PARAMS)
+    params["negation_window"] = 2
+    inside = classify("tidak benar harus diaudit", (), params=params)
+    outside = classify("tidak sangat benar harus diaudit", (), params=params)
+    assert inside.needs_human_review is True
+    assert outside.needs_human_review is False
+
+
+def test_negation_must_be_a_whole_word() -> None:
+    assert classify("katanya ketidaktahuan harus diaudit", ()).needs_human_review is False
+
+
+def test_negation_also_flags_agreement_cues() -> None:
+    params = copy.deepcopy(PARAMS)
+    params["agree_cues"] = ["setuju"]
+    a = classify("saya tidak setuju", (SEED,), params=params)
+    assert a.needs_human_review is True
+
+
+def test_negation_in_a_sentence_before_still_counts_only_inside_the_window() -> None:
+    a = classify("Bukan masalah. Kami semua dan banyak lainnya bilang harus diaudit", ())
+    assert a.needs_human_review is False
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        lambda p: p.pop("negation_window"),
+        lambda p: p.pop("negation_cues"),
+        lambda p: p.update(negation_window=0),
+        lambda p: p.update(negation_window=11),
+        lambda p: p.update(negation_window=True),
+        lambda p: p.update(negation_window="5"),
+        lambda p: p.update(negation_cues="tidak"),
+        lambda p: p.update(negation_cues=[""]),
+    ],
+)
+def test_negation_parameters_are_validated(mutate) -> None:
+    params = copy.deepcopy(PARAMS)
+    mutate(params)
+    with pytest.raises(RulesParameterError):
+        validate_parameters(params)
+
+
+def test_negation_window_upper_bound_is_accepted() -> None:
+    params = copy.deepcopy(PARAMS)
+    params["negation_window"] = 10
+    validate_parameters(params)
+    params["negation_window"] = 1
+    validate_parameters(params)
+
+
+def test_negation_flags_contra_cues() -> None:
+    params = copy.deepcopy(PARAMS)
+    params["negation_window"] = 10
+    b = classify("jangan bilang perusahaan tidak perlu diaudit", (), params=params)
+    assert b.issue_stance is IssueStance.CONTRA
+    assert b.needs_human_review is True
+    assert b.basis["matched"]["negation"][0]["class"] == "contra"
+
+
+def test_negation_flags_disagreement_cues() -> None:
+    params = copy.deepcopy(PARAMS)
+    params["disagree_cues"] = ["salah besar"]
+    params["agree_cues"] = ["setuju"]
+    a = classify("bukan salah besar", (SEED,), params=params)
+    assert a.needs_human_review is True
+    assert a.basis["matched"]["negation"][0]["class"] == "disagree"

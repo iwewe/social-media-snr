@@ -17,6 +17,11 @@ Aturan (urut):
    tersedia -> UNDETERMINED.
 5. Target alignment dinilai terhadap INDUK LANGSUNG, terpisah dari stance isu.
 6. Karakter multi-label dari cue; RC-10 bila tak ada. RC-07 selalu menandai tinjauan manusia.
+7. Negasi (opsional; `negation_cues` + `negation_window`): bila ada kata negasi dalam jendela kata
+   SEBELUM kecocokan cue yang membawa stance (pro/kontra/setuju/tidak setuju), respons ditandai
+   "perlu tinjauan manusia". Stance TIDAK diubah: mesin tidak memahami negasi, hanya mencegah
+   hasil yang mungkin terbalik tampil seolah pasti. Negasi di dalam cue itu sendiri
+   (mis. "tidak perlu diaudit") tidak dihitung.
 Sarkasme tidak dideteksi di luar cue yang diberikan analis; ketidakmampuan itu dicatat di
 evaluasi, bukan disembunyikan.
 """
@@ -40,6 +45,9 @@ _PARAM_KEYS = {
     "sentiment_cues",
     "min_matches",
 }
+# Opsional, harus bersama-sama. Tanpa keduanya perilaku sama seperti sebelum fitur ini.
+_NEGATION_KEYS = {"negation_cues", "negation_window"}
+_MAX_NEGATION_WINDOW = 10
 
 
 class RulesParameterError(ValueError):
@@ -75,8 +83,24 @@ def _cue_list(value: Any, where: str) -> tuple[str, ...]:
 
 
 def validate_parameters(parameters: Mapping[str, Any]) -> None:
-    if set(parameters) != _PARAM_KEYS:
-        raise RulesParameterError(f"parameter wajib tepat: {sorted(_PARAM_KEYS)}")
+    keys = set(parameters)
+    negation_keys = keys & _NEGATION_KEYS
+    if keys - _NEGATION_KEYS != _PARAM_KEYS or negation_keys not in (set(), _NEGATION_KEYS):
+        raise RulesParameterError(
+            f"parameter wajib tepat: {sorted(_PARAM_KEYS)} "
+            f"(opsional, bersama-sama: {sorted(_NEGATION_KEYS)})"
+        )
+    if negation_keys:
+        _cue_list(parameters["negation_cues"], "negation_cues")
+        window = parameters["negation_window"]
+        if (
+            isinstance(window, bool)
+            or not isinstance(window, int)
+            or not 1 <= window <= _MAX_NEGATION_WINDOW
+        ):
+            raise RulesParameterError(
+                f"negation_window harus bilangan bulat 1..{_MAX_NEGATION_WINDOW}"
+            )
     min_matches = parameters["min_matches"]
     if (
         isinstance(min_matches, bool)
@@ -160,6 +184,15 @@ class RulesClassifier:
         self._sent = {
             k: _cue_list(parameters["sentiment_cues"][k], k) for k in ("POSITIVE", "NEGATIVE")
         }
+        self._negation = _cue_list(parameters.get("negation_cues", []), "negation_cues")
+        self._negation_window = int(parameters.get("negation_window", 0))
+
+    def _negations_before(self, text: str, match: _Match) -> list[str]:
+        """Kata negasi dalam `negation_window` kata tepat sebelum kecocokan (bukan di dalam cue)."""
+        if not self._negation or self._negation_window <= 0:
+            return []
+        tail = " " + " ".join(text[: match.start].split()[-self._negation_window :]) + " "
+        return [cue for cue in self._negation if f" {cue} " in tail]
 
     def _proposition_cues(
         self, proposition_id: int | None
@@ -278,6 +311,14 @@ class RulesClassifier:
         needs_review = Character.INTIMIDATION in characters
         if needs_review:
             basis["rules"].append("review:intimidation_requires_human")
+        negated = [
+            {"cue": m.cue, "class": m.klass, "negation": found}
+            for m in (*pro, *contra, *agree, *disagree)
+            if (found := self._negations_before(text, m))
+        ]
+        if negated:
+            needs_review = True
+            basis["rules"].append("review:negation_near_stance_cue")
         basis["matched"] = {
             "pro": sorted({m.cue for m in pro}),
             "contra": sorted({m.cue for m in contra}),
@@ -288,6 +329,8 @@ class RulesClassifier:
             },
             "sentiment": sorted({m.cue for m in negative + positive}),
         }
+        if negated:
+            basis["matched"]["negation"] = negated
         basis["parent_chain_length"] = len(item.parent_chain)
         return Assessment(
             issue_stance=stance,

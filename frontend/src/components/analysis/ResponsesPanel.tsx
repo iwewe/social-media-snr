@@ -363,6 +363,11 @@ export function ResponsesPanel({
                             Perlu tinjauan manusia
                           </div>
                         )}
+                        {row.basis.rules.includes("review:negation_near_stance_cue") && (
+                          <div className="muted" data-negation-note>
+                            Ada kata negasi di dekat cue stance; stance dari mesin bisa terbalik.
+                          </div>
+                        )}
                         {row.review && (
                           <div className="muted">
                             Ditinjau oleh {row.review.by}: {row.review.reason} ({row.versions}{" "}

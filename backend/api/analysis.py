@@ -832,8 +832,9 @@ def evidence_access_page(
 CONTEXT_NOTE = (
     "Catatan konteks target tersimpan dan berversi, tetapi TEKSNYA belum dibaca klasifier mesin. "
     "Yang dipakai: stance awal target, cue yang Anda tulis, dan rantai balasan. Mengubah "
-    "penjelasan konteks saja tidak mengubah klasifikasi; baseline juga belum memahami negasi "
-    "secara umum, dan narrative function tidak diisi mesin."
+    "penjelasan konteks saja tidak mengubah klasifikasi; baseline tidak memahami negasi (respons "
+    "dengan kata negasi di dekat cue stance ditandai perlu tinjauan manusia, stance tidak "
+    "diubah), dan narrative function tidak diisi mesin."
 )
 
 
