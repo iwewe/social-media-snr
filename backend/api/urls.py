@@ -114,6 +114,17 @@ urlpatterns = [
     path("observations/<int:pk>/", av.ObservationDetailView.as_view(), name="observation"),
     path("investigations/<int:pk>/audit/", av.AuditListView.as_view(), name="audit"),
     path(
+        "investigations/<int:pk>/analysis-setup/",
+        av.AnalysisSetupView.as_view(),
+        name="analysis-setup",
+    ),
+    path("investigations/<int:pk>/datasets/", av.DatasetCreateView.as_view(), name="datasets"),
+    path(
+        "analysis-runs/<int:pk>/reanalyze/",
+        av.AnalysisReanalyzeView.as_view(),
+        name="analysis-reanalyze",
+    ),
+    path(
         "investigations/<int:pk>/evidence-access/",
         av.EvidenceAccessView.as_view(),
         name="evidence-access",

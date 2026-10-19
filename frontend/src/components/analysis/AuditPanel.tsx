@@ -16,6 +16,7 @@ const ACTIONS: [string, string][] = [
   ["FINDING_REVISE", "Temuan direvisi"],
   ["FINDING_ENDORSE", "Temuan disahkan"],
   ["FINDING_WITHDRAW", "Temuan ditarik"],
+  ["ANALYSIS_RUN", "Analisis dijalankan"],
 ];
 
 export interface AuditScope {

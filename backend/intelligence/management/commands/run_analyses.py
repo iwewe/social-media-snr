@@ -15,35 +15,11 @@ from django.core.management.base import BaseCommand, CommandError
 from collection.models import InspectionRun, PostObservation
 from intelligence import coordination_runs, profiles, services
 from intelligence.errors import AnalysisError
+from intelligence.examples import CO_EXAMPLE, EXPLORATORY_NOTE
 from intelligence.m2.example_rules import example_parameters
 from intelligence.models import AnalysisRun
 from intelligence.networks import network_parameters
 from investigations.models import Investigation, Proposition
-
-EXPLORATORY_NOTE = (
-    "Nilai parameter adalah CONTOH untuk eksplorasi (bukan ambang koordinasi); tiap run menyimpan "
-    "parameternya dan hasilnya adalah indikator, bukan temuan."
-)
-CO_EXAMPLE: dict[str, Any] = dict(
-    sync_window_seconds=120,
-    sync_min_events=1,
-    co_response_min_shared=1,
-    similarity_ngram=3,
-    similarity_threshold=0.8,
-    similarity_min_chars=20,
-    similarity_min_pairs=1,
-    similarity_max_responses=1000,
-    amplification_window_seconds=300,
-    amplification_min_events=1,
-    url_min_shared=1,
-    phrase_words=5,
-    phrase_min_shared=1,
-    repeated_min_shared_targets=2,
-    permutations=100,
-    baseline_seed=1,
-    evidence_limit=50,
-    max_pair_events=5_000_000,
-)
 
 
 class Command(BaseCommand):

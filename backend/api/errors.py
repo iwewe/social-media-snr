@@ -8,7 +8,7 @@ from rest_framework.views import exception_handler as drf_exception_handler
 
 from collection.orchestrator import InspectionInProgress, NotAwaitingReview, OrchestrationError
 from intelligence.assessment import AlreadyReviewed, InvalidReview
-from intelligence.errors import AnalysisError
+from intelligence.errors import AnalysisError, NothingNew
 from intelligence.findings import ConfidenceAboveCeiling, InvalidFinding
 from investigations.access import InsufficientRole, SuperuserRequired
 from investigations.errors import DomainError, DuplicateTarget
@@ -28,6 +28,8 @@ def api_exception_handler(exc: Exception, context: dict[str, Any]) -> Response |
         return Response({"detail": str(exc), "code": "invalid_finding"}, status=400)
     if isinstance(exc, InvalidReview):
         return Response({"detail": str(exc), "code": "invalid_review"}, status=400)
+    if isinstance(exc, NothingNew):
+        return Response({"detail": str(exc), "code": "nothing_new"}, status=409)
     if isinstance(exc, AnalysisError):
         return Response({"detail": str(exc), "code": type(exc).__name__}, status=400)
     if isinstance(exc, DuplicateTarget):

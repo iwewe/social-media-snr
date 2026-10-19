@@ -10,10 +10,13 @@ from typing import Any
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from collection.models import InspectionRun
 from intelligence import findings as fs
+from intelligence import launch, services
 from intelligence.assessment import assessment_history, review_assessment
+from intelligence.errors import InvalidSelection
 from intelligence.m5 import AXES
-from intelligence.models import AnalysisRun, CoordinationEdge, Finding
+from intelligence.models import AnalysisRun, CoordinationEdge, DatasetVersion, Finding
 from investigations.enums import Role
 from investigations.models import Investigation
 
@@ -28,14 +31,17 @@ from .access import (
 )
 from .base import ApiView
 from .serializers import (
+    AnalysisRunCreateInput,
     AssessmentReviewInput,
     AuditListInput,
     CoordinationInput,
+    DatasetCreateInput,
     EvidenceAccessInput,
     FindingInput,
     FindingNoteInput,
     GraphInput,
     PageInput,
+    ReanalyzeInput,
     ResponseListInput,
 )
 
@@ -69,6 +75,24 @@ class AnalysisRunListView(ApiView):
         if method:
             runs = runs.filter(method=method)
         return Response({"results": [analysis.run_repr(r) for r in runs.order_by("-id")]})
+
+    def post(self, request: Request, pk: int) -> Response:
+        """Mulai analisis: parameter eksplisit, dijalankan worker (WP-2.9; ADR 0041)."""
+        inv = investigation_for(_user(request), pk, Role.MEMBER)
+        data = _valid(AnalysisRunCreateInput, request)
+        dataset = DatasetVersion.objects.filter(pk=data["dataset_id"], investigation=inv).first()
+        if dataset is None:
+            raise InvalidSelection("dataset tidak ditemukan pada investigasi ini")
+        run = launch.launch(
+            investigation=inv,
+            by=_user(request),
+            dataset=dataset,
+            method=data["method"],
+            data=data["parameters"],
+            proposition_id=data.get("proposition_id"),
+            source_run_id=data.get("source_run_id"),
+        )
+        return Response(analysis.run_repr(run, full=True), status=202)
 
 
 class AnalysisRunDetailView(ApiView):
@@ -269,3 +293,42 @@ class EvidenceAccessView(ApiView):
         return Response(
             analysis.evidence_access_page(inv, filters=query, page=page, page_size=size)
         )
+
+
+# --- memulai analisis dari antarmuka (WP-2.9) ----------------------------------------------------
+
+
+class AnalysisSetupView(ApiView):
+    def get(self, request: Request, pk: int) -> Response:
+        inv = investigation_for(_user(request), pk, Role.VIEWER)
+        return Response(analysis.setup_payload(inv))
+
+
+class DatasetCreateView(ApiView):
+    """Bekukan observasi dari pemeriksaan terpilih menjadi DatasetVersion baru (satu platform)."""
+
+    def post(self, request: Request, pk: int) -> Response:
+        inv = investigation_for(_user(request), pk, Role.MEMBER)
+        data = _valid(DatasetCreateInput, request)
+        ids = list(dict.fromkeys(data["inspection_run_ids"]))
+        runs = list(InspectionRun.objects.filter(pk__in=ids, target__investigation=inv))
+        if len(runs) != len(ids):
+            raise InvalidSelection("pemeriksaan tidak ditemukan pada investigasi ini")
+        dataset = services.create_dataset_version(
+            investigation=inv, runs=runs, by=_user(request), note=data["note"]
+        )
+        return Response(analysis.dataset_repr(dataset), status=201)
+
+
+class AnalysisReanalyzeView(ApiView):
+    """Analisis ulang pada data terbaru: dataset dan run baru; yang lama utuh (FR-041)."""
+
+    def post(self, request: Request, pk: int) -> Response:
+        previous = analysis_run_for(_user(request), pk, Role.MEMBER)
+        data = _valid(ReanalyzeInput, request)
+        run = launch.launch_reanalysis(
+            previous=previous,
+            by=_user(request),
+            use_latest_context=data["use_latest_context"],
+        )
+        return Response(analysis.run_repr(run, full=True), status=202)

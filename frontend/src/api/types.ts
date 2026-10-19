@@ -331,6 +331,7 @@ export interface AnalysisRunInfo {
     observation_count: number;
     digest: string;
   };
+  error?: string | null;
   previous_run: number | null;
   tier: TierInfo | null;
 }
@@ -624,8 +625,9 @@ export type AuditAction =
   | "FINDING_DRAFT"
   | "FINDING_REVISE"
   | "FINDING_ENDORSE"
-  | "FINDING_WITHDRAW";
-export type AuditSubject = "issue" | "target" | "response_assessment" | "finding";
+  | "FINDING_WITHDRAW"
+  | "ANALYSIS_RUN";
+export type AuditSubject = "issue" | "target" | "response_assessment" | "finding" | "analysis_run";
 
 export interface AuditEvent {
   id: number;
@@ -665,4 +667,40 @@ export interface EvidenceAccessPage {
   page_size: number;
   results: EvidenceAccessRow[];
   notice: string;
+}
+
+export interface DatasetInfo {
+  id: number;
+  number: number;
+  platform: Platform;
+  observation_count: number;
+  inspection_runs: number;
+  note: string;
+  created_at: string;
+}
+
+export interface AnalysisSetup {
+  datasets: DatasetInfo[];
+  inspection_runs: {
+    id: number;
+    target_id: number;
+    target_url: string;
+    platform: Platform;
+    sequence: number;
+    status: string;
+    finished_at: string | null;
+  }[];
+  propositions: {
+    id: number;
+    label: string;
+    statement: string;
+    issue: { id: number; title: string };
+  }[];
+  m2_runs: { id: number; dataset_id: number; created_at: string }[];
+  examples: {
+    m3: Record<string, number>;
+    m4: Record<string, unknown>;
+    co: Record<string, number>;
+  };
+  notes: { exploratory: string; context: string };
 }

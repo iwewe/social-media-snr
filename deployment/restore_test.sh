@@ -27,7 +27,9 @@ docker compose exec -T postgres psql -U "$POSTGRES_USER" -d postgres \
   -c "DROP DATABASE IF EXISTS $TEST_DB WITH (FORCE)" >/dev/null
 
 echo "###### 1. backup"
-BACKUP_LINE="$(bash deployment/backup.sh | tee /dev/stderr | grep '^BACKUP ' | tail -1)"
+# Catatan: `tee /dev/stderr` memotong berkas bila stderr dialihkan ke berkas (log E2E ikut terpotong).
+bash deployment/backup.sh | tee "$WORK/backup.log" >&2
+BACKUP_LINE="$(grep '^BACKUP ' "$WORK/backup.log" | tail -1)"
 BACKUP="${BACKUP_LINE#BACKUP }"
 echo "###### 2. restore ke $TEST_DB"
 RESTORED="$WORK/evidence-restored"

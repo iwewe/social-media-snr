@@ -42,7 +42,7 @@ export const HELP = {
   },
   viewClassifiedResponses: {
     title: "Respons terklasifikasi",
-    body: "Setiap respons ditandai kategorinya: fakta observasi (data yang diambil apa adanya), hasil mesin (klasifikasi otomatis dari aturan), atau ditinjau manusia (koreksi peninjau yang menjadi baris baru, bukan menimpa). Stance dinilai terhadap proposition dan berbeda dari kesepakatan terhadap posting yang dibalas. Klasifikasi mesin dapat keliru; respons yang ditandai perlu tinjauan sebaiknya diperiksa manusia, dan semua koreksi tersimpan dengan riwayatnya.",
+    body: "Setiap respons ditandai kategorinya: fakta observasi (data yang diambil apa adanya), hasil mesin (klasifikasi otomatis dari aturan), atau ditinjau manusia (koreksi peninjau yang menjadi baris baru, bukan menimpa). Stance dinilai terhadap proposition dan berbeda dari kesepakatan terhadap posting yang dibalas. Klasifikasi mesin dapat keliru; respons yang ditandai perlu tinjauan sebaiknya diperiksa manusia, dan semua koreksi tersimpan dengan riwayatnya. Catatan konteks target tersimpan dan berversi, tetapi teksnya belum dibaca mesin: yang dipakai adalah stance awal target, cue yang ditulis analis, dan rantai balasan.",
   },
   viewActorProfile: {
     title: "Profil akun terhadap isu",

@@ -100,6 +100,13 @@ export const DIMENSION_LABELS: Record<string, string> = {
   activity_evolution: "Perubahan aktivitas",
 };
 
+export const METHOD_LABELS: Record<string, string> = {
+  "m2-rules": "Klasifikasi respons (M2)",
+  "m3-profile": "Profil akun (M3)",
+  "m4-network": "Jaringan interaksi (M4)",
+  "co-indicators": "Indikator pola perilaku",
+};
+
 export const INDICATOR_LABELS: Record<string, string> = {
   "CO-01": "Membalas posting yang sama",
   "CO-02": "Waktu serentak",

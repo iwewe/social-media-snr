@@ -31,6 +31,6 @@ Tingkat verifikasi: tes unit/integrasi/E2E dijalankan `make ci` dan `make e2e`; 
   (`docs/pilot/`, ADR 0037). Tidak ada klaim kualitas model/koordinasi pada data nyata; hasil sintetis hanya menguji alur.
 - **Keputusan terbuka rencana bagian 11:** D-01 (model NLP), D-04 (durasi retensi), D-05 (kapasitas/perangkat backup),
   D-06 (batas waktu job), D-08 (desain laporan) tetap terbuka; D-02/D-07 hanya dieksplorasi pada data sintetis.
-- **Keterbatasan produk yang diketahui:** analisis dipicu operator (`manage.py run_analyses`), belum dari antarmuka;
+- **Keterbatasan produk yang diketahui:** catatan konteks target belum dibaca klasifier (hanya stance awal, cue analis, dan rantai balasan);
   tidak ada enkripsi backup, penjadwalan backup otomatis, maupun domain/sertifikat produksi (ADR 0034/0035);
   keamanan operasional VM (kata sandi SSH, kredensial di deskripsi VM Proxmox) adalah tindakan di luar repo.
