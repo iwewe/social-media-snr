@@ -34,7 +34,8 @@ def proposition_repr(p: Proposition) -> dict[str, Any]:
 
 
 def issue_repr(issue: Issue) -> dict[str, Any]:
-    latest = issue.context_versions.order_by("-version").first()
+    versions = list(issue.context_versions.select_related("created_by").order_by("-version"))
+    latest = versions[0] if versions else None
     return {
         "id": issue.pk,
         "title": issue.title,
@@ -42,6 +43,15 @@ def issue_repr(issue: Issue) -> dict[str, Any]:
         "context": None
         if latest is None
         else {"version": latest.version, "definition": latest.definition},
+        "context_history": [
+            {
+                "version": v.version,
+                "definition": v.definition,
+                "created_at": v.created_at.isoformat(),
+                "created_by": v.created_by.get_username(),
+            }
+            for v in versions
+        ],
         "propositions": [proposition_repr(p) for p in issue.propositions.all()],
     }
 

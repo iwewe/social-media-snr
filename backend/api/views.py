@@ -42,6 +42,7 @@ from .serializers import (
     ContextRevisionInput,
     InspectionInput,
     InvestigationInput,
+    IssueContextInput,
     IssueInput,
     MemberInput,
     PageInput,
@@ -156,6 +157,19 @@ class IssueCreateView(ApiView):
             user=_user(request),
             title=data["title"],
             definition=data["definition"],
+        )
+        return Response(presenters.issue_repr(issue), status=201)
+
+
+class IssueContextReviseView(ApiView):
+    def post(self, request: Request, pk: int) -> Response:
+        issue = issue_for(_user(request), pk, Role.MEMBER)
+        data = _valid(IssueContextInput, request)
+        latest = issue.context_versions.order_by("-version").first()
+        if latest is not None and latest.definition == data["definition"]:
+            raise InvalidContext("Definisi sama dengan versi terbaru; tidak ada yang direvisi.")
+        services.revise_issue_context(
+            issue=issue, user=_user(request), definition=data["definition"]
         )
         return Response(presenters.issue_repr(issue), status=201)
 

@@ -67,6 +67,12 @@ export interface Issue {
   title: string;
   created_at: string;
   context: { version: number; definition: string } | null;
+  context_history: {
+    version: number;
+    definition: string;
+    created_at: string;
+    created_by: string;
+  }[];
   propositions: Proposition[];
 }
 

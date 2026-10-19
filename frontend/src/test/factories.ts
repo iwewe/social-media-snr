@@ -283,6 +283,7 @@ export const detail = (
       title: "Isu uji",
       created_at: "2026-10-16T05:00:00Z",
       context: null,
+      context_history: [],
       propositions: [],
     },
   ],

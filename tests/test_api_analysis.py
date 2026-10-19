@@ -450,6 +450,7 @@ def test_the_matrix_covers_every_new_object_route(world) -> None:
         "investigations/<int:pk>/",
         "investigations/<int:pk>/issues/",
         "issues/<int:pk>/propositions/",
+        "issues/<int:pk>/context-versions/",
         "investigations/<int:pk>/targets/",
         "targets/<int:pk>/context-versions/",
         "targets/<int:pk>/inspections/",

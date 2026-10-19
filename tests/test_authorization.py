@@ -90,6 +90,13 @@ def endpoints(w: World):
             Role.MEMBER,
         ),
         (
+            "issue: revisi konteks",
+            "post",
+            f"/api/issues/{w.issue_id}/context-versions/",
+            lambda: {"definition": f"D{next(_n)}"},
+            Role.MEMBER,
+        ),
+        (
             "proposition: buat",
             "post",
             f"/api/issues/{w.issue_id}/propositions/",
@@ -215,6 +222,7 @@ def test_the_endpoint_table_covers_every_object_endpoint() -> None:
         "investigations/<int:pk>/",
         "investigations/<int:pk>/issues/",
         "issues/<int:pk>/propositions/",
+        "issues/<int:pk>/context-versions/",
         "investigations/<int:pk>/targets/",
         "targets/<int:pk>/context-versions/",
         "targets/<int:pk>/inspections/",
