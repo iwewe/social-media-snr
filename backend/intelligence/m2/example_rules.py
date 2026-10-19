@@ -47,6 +47,9 @@ def example_parameters(
             "RC-09": ["jual follower", "promo diskon"],
         },
         "sentiment_cues": {"POSITIVE": [], "NEGATIVE": ["marah", "sedih", "capek"]},
+        # Negasi: hanya untuk menandai "perlu tinjauan manusia"; mesin tidak memahami negasi.
+        "negation_cues": ["tidak", "bukan", "nggak", "gak", "ga", "tak", "belum", "jangan"],
+        "negation_window": 5,
         "min_matches": min_matches,
     }
 

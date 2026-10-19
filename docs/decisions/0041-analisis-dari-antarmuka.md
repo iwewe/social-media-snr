@@ -43,6 +43,6 @@ responsif dan konsisten dengan inspeksi.
 
 - Nilai contoh tetap contoh, bukan konfigurasi yang telah dievaluasi (pilot belum dilaksanakan).
 - Cue M2 hanya untuk stance proposition; daftar setuju/tidak setuju dan karakter respons memakai daftar dasar modul
-  (belum dapat disunting dari antarmuka). Baseline belum memahami negasi umum dan tidak mengisi narrative function.
+  (belum dapat disunting dari antarmuka). Baseline tidak memahami negasi (respons bernegasi dekat cue stance ditandai perlu tinjauan, ADR 0044) dan tidak mengisi narrative function.
 - Tidak ada pembatalan analisis yang sedang berjalan dan tidak ada batas waktu eksekusi bawaan (menunggu pengukuran, D-06).
 - Antrean/worker harus berjalan; bila tidak, run ditandai FAILED dengan pesan, dan pengguna harus mengirim ulang manual.
