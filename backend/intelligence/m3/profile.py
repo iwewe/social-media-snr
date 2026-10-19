@@ -50,7 +50,10 @@ def participation(records: Sequence[ResponseRecord]) -> dict[str, Any]:
     known = [r.published_at for r in records if r.published_at is not None]
     return {
         "status": OK,
+        "unit": "satu Post = satu respons (observasi terbarunya dalam dataset)",
         "responses": len(records),
+        "observations": sum(r.observation_count for r in records),
+        "responses_with_changed_text": sum(1 for r in records if r.text_variants > 1),
         "distinct_parent_posts": len({r.parent_post_id for r in records if r.parent_post_id}),
         "distinct_targets": len({r.target_id for r in records}),
         "responses_without_known_time": len(records) - len(known),

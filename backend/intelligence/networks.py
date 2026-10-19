@@ -229,11 +229,15 @@ def run_m4_network(frozen: Any, parameters: dict[str, Any]) -> dict[str, Any]:
         "id", "run_id", "from_post_id", "relation_type", "to_post_id", "to_actor_id"
     )
     records: list[RelationRecord] = []
-    outside_dataset = 0
+    outside_dataset = superseded = 0
     for rel in relations:
         origin = by_run_post.get((rel["run_id"], rel["from_post_id"]))
         if origin is None:
             outside_dataset += 1
+            continue
+        if latest_by_post[rel["from_post_id"]]["id"] != origin["id"]:
+            # relasi dari observasi lama: Post yang sama sudah dihitung lewat yang terbaru
+            superseded += 1
             continue
         if rel["to_actor_id"] is not None:
             to_actor = rel["to_actor_id"]
@@ -256,12 +260,16 @@ def run_m4_network(frozen: Any, parameters: dict[str, Any]) -> dict[str, Any]:
 
     node_attributes: dict[int, dict[str, Any]] = {}
     stance_counts: dict[int, Counter] = defaultdict(Counter)
+    # Satu Post = satu aktivitas (observasi terbarunya); observasi historis dilaporkan terpisah.
+    per_actor_posts = Counter(
+        o["author_id"] for o in latest_by_post.values() if o["author_id"] is not None
+    )
     per_actor = Counter(o["author_id"] for o in observations if o["author_id"] is not None)
-    for o in observations:
+    for o in latest_by_post.values():
         if o["author_id"] is not None and o["id"] in stance_by_obs:
             stance_counts[o["author_id"]][stance_by_obs[o["id"]]] += 1
     for actor, count in per_actor.items():
-        attrs: dict[str, Any] = {"observations": count}
+        attrs: dict[str, Any] = {"posts": per_actor_posts[actor], "observations": count}
         if stance_view:
             counts = dict(sorted(stance_counts[actor].items()))
             attrs.update(
@@ -280,6 +288,8 @@ def run_m4_network(frozen: Any, parameters: dict[str, Any]) -> dict[str, Any]:
     exclusions = dict(sorted(network.exclusions.items()))
     if outside_dataset:
         exclusions["relation_origin_not_in_dataset"] = outside_dataset
+    if superseded:
+        exclusions["relation_from_superseded_observation"] = superseded
     definition = {
         "node": "ActorAccount pada satu platform (penulis dalam dataset, akun yang dituju)",
         "edge": "relasi teramati dari penulis ke akun yang dituju; digabung per (dari, ke, jenis)",
@@ -287,7 +297,7 @@ def run_m4_network(frozen: Any, parameters: dict[str, Any]) -> dict[str, Any]:
         "relation_types": list(params.relation_types),
         "weighting": params.weighting,
         "weight_rule": (
-            "jumlah observasi berbeda pembentuk edge"
+            "jumlah Post berbeda pembentuk edge (satu Post = satu relasi, observasi terbarunya)"
             if params.weighting == "count"
             else "1 per edge"
         ),
@@ -356,4 +366,4 @@ def run_m4_network(frozen: Any, parameters: dict[str, Any]) -> dict[str, Any]:
 def register() -> None:
     from .methods import REGISTRY, Method
 
-    REGISTRY["m4-network"] = Method("m4-network", "1", validate_m4_parameters, run_m4_network)
+    REGISTRY["m4-network"] = Method("m4-network", "2", validate_m4_parameters, run_m4_network)

@@ -112,8 +112,18 @@ export function ProfilesPanel({ run }: { run: AnalysisRunInfo }) {
                         <span className="note">{p.coverage_statement}</span>
                       </td>
                       <td>
-                        {p.participation.responses ?? 0} respons pada{" "}
+                        {p.participation.responses ?? 0} respons unik pada{" "}
                         {p.participation.distinct_targets ?? 0} target
+                        {(p.participation.observations ?? 0) > (p.participation.responses ?? 0) ||
+                        (p.participation.responses_with_changed_text ?? 0) > 0 ? (
+                          <div className="muted" data-history>
+                            {p.participation.observations} observasi historis
+                            {(p.participation.responses_with_changed_text ?? 0) > 0
+                              ? `; ${p.participation.responses_with_changed_text} teks berubah`
+                              : ""}
+                            . Pemeriksaan ulang tidak menambah aktivitas.
+                          </div>
+                        ) : null}
                       </td>
                       <td>
                         <button type="button" onClick={() => void open(p.id)}>
