@@ -2,6 +2,10 @@
 
 Satu dokumen per platform. Format dan batasnya mengikuti rencana WP-3.0 dan PRD bagian 7 dan 13.
 
+**Keputusan organisasi (2026-10-19):** jalur tunggal untuk semua platform adalah pemeriksaan browser dengan sesi
+milik operator, dipicu manual dan tidak berjalan otomatis; lihat [keputusan-organisasi.md](keputusan-organisasi.md).
+Tabel di bawah menunjukkan status adapter, bukan jalur yang dipilih.
+
 ## Pernyataan yang berlaku untuk semua platform
 
 - Tidak ada mekanisme untuk melewati CAPTCHA, pembatasan akses, atau larangan platform. Login browser bukan
