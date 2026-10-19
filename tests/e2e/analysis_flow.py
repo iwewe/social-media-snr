@@ -5,6 +5,7 @@ Env: E2E_BASE_URL, E2E_USER, E2E_PASSWORD, E2E_INVESTIGATION (id), E2E_SHOTS (op
 """
 
 import os
+import re
 
 from playwright.sync_api import Page, expect, sync_playwright
 
@@ -106,6 +107,25 @@ def main() -> None:
         expect(drawer.locator("li[data-action='CLASSIFICATION_REVIEW']")).to_have_count(1)
         step("satu klik dari jejak ke observasi: laci bukti memuat riwayat koreksinya")
         drawer.get_by_role("button", name="Tutup").click()
+
+        # Menjalankan analisis dari antarmuka (WP-2.9): dikirim ke worker, status berubah sampai selesai.
+        page.get_by_role("tab", name="Jalankan analisis").click()
+        expect(page.locator("[data-context-note]")).to_contain_text("belum dibaca klasifier")
+        page.get_by_label("Proposition").select_option(index=1)
+        page.get_by_label("Cue pro").fill("setuju\nharus diaudit")
+        page.get_by_label("Cue kontra").fill("tolak")
+        page.get_by_role("button", name="Jalankan analisis").click()
+        status = page.locator("p[role='status']")
+        expect(status).to_contain_text("dikirim ke worker")
+        run_id = re.search(r"Analisis #(\d+)", status.inner_text()).group(1)
+        done = page.locator(f"tr[data-run='{run_id}'][data-status='COMPLETED']")
+        expect(done).to_be_visible(timeout=90_000)
+        shot(page, "analysis_run")
+        step("analisis dijalankan dari antarmuka lewat worker sampai selesai")
+        # Tidak ada observasi baru sejak dataset terakhir: analisis ulang ditolak dengan pesan jelas.
+        done.get_by_role("button", name="Analisis ulang").click()
+        expect(page.get_by_role("alert")).to_contain_text("tidak ada observasi baru")
+        step("analisis ulang tanpa data baru ditolak dengan pesan yang jelas")
 
         text = (page.locator("main").inner_text()).lower()
         for bad in BAD_WORDS:

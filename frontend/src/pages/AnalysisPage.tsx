@@ -11,11 +11,12 @@ import { FindingsPanel } from "../components/analysis/FindingsPanel";
 import { NetworkPanel } from "../components/analysis/NetworkPanel";
 import { ObservationDrawer } from "../components/analysis/ObservationDrawer";
 import { ProfilesPanel } from "../components/analysis/ProfilesPanel";
+import { RunAnalysisPanel } from "../components/analysis/RunAnalysisPanel";
 import { ResponsesPanel } from "../components/analysis/ResponsesPanel";
 import { RoleBadge } from "../components/RoleBadge";
 import { canWrite } from "../team/roles";
 
-type Tab = "responses" | "network" | "profiles" | "findings" | "audit" | "evidence";
+type Tab = "responses" | "network" | "profiles" | "findings" | "audit" | "evidence" | "run";
 const TABS: { id: Tab; label: string }[] = [
   { id: "responses", label: "Respons" },
   { id: "network", label: "Jaringan" },
@@ -23,6 +24,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "findings", label: "Temuan" },
   { id: "audit", label: "Jejak audit" },
   { id: "evidence", label: "Akses bukti" },
+  { id: "run", label: "Jalankan analisis" },
 ];
 
 function RunPicker({
@@ -54,9 +56,9 @@ function RunPicker({
 function NoAnalysis({ what }: { what: string }) {
   return (
     <p className="message" data-level="info" role="note" data-empty>
-      Belum ada analisis {what} yang selesai pada investigasi ini. Analisis dijalankan operator
-      (perintah <code>manage.py run_analyses</code>) dan hasilnya tampil di sini; belum ada tombol
-      untuk memicunya dari antarmuka.
+      Belum ada analisis {what} yang selesai pada investigasi ini. Anggota dapat menjalankannya dari
+      tab <strong>Jalankan analisis</strong>; operator juga dapat memakai{" "}
+      <code>manage.py run_analyses</code>. Hasilnya tampil di sini.
     </p>
   );
 }
@@ -67,7 +69,7 @@ export function AnalysisPage() {
   const [params, setParams] = useSearchParams();
   const tab = (params.get("tab") as Tab) ?? "responses";
   const [detail, setDetail] = useState<InvestigationDetail | null>(null);
-  const [runs, setRuns] = useState<AnalysisRunInfo[] | null>(null);
+  const [allRuns, setAllRuns] = useState<AnalysisRunInfo[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [observation, setObservation] = useState<number | null>(null);
   const [focusFinding, setFocusFinding] = useState<number | null>(null);
@@ -77,16 +79,21 @@ export function AnalysisPage() {
   const [m2Id, setM2Id] = useState(0);
   const [m3Id, setM3Id] = useState(0);
 
+  const reloadRuns = useCallback(() => {
+    api
+      .get<{ results: AnalysisRunInfo[] }>(`/api/investigations/${id}/analysis-runs/`)
+      .then((r) => setAllRuns(r.results))
+      .catch((e: unknown) => setError(errorText(e)));
+  }, [id]);
+  const runs = useMemo(() => (allRuns ?? []).filter((x) => x.status === "COMPLETED"), [allRuns]);
+
   useEffect(() => {
     api
       .get<InvestigationDetail>(`/api/investigations/${id}/`)
       .then(setDetail)
       .catch((e: unknown) => setError(errorText(e)));
-    api
-      .get<{ results: AnalysisRunInfo[] }>(`/api/investigations/${id}/analysis-runs/`)
-      .then((r) => setRuns(r.results.filter((x) => x.status === "COMPLETED")))
-      .catch((e: unknown) => setError(errorText(e)));
-  }, [id]);
+    reloadRuns();
+  }, [id, reloadRuns]);
 
   const byMethod = useMemo(
     () => (method: string) => (runs ?? []).filter((r) => r.method === method),
@@ -122,7 +129,7 @@ export function AnalysisPage() {
   };
 
   if (error) return <ErrorMessage error={error} />;
-  if (!detail || !runs) return <p className="muted">Memuat...</p>;
+  if (!detail || !allRuns) return <p className="muted">Memuat...</p>;
 
   const writable = canWrite(detail.my_role);
   const activeM2 = m2.find((r) => r.id === m2Id) ?? m2[0];
@@ -222,6 +229,14 @@ export function AnalysisPage() {
         />
       )}
       {tab === "evidence" && <EvidenceAccessPanel investigationId={detail.id} />}
+      {tab === "run" && (
+        <RunAnalysisPanel
+          investigationId={detail.id}
+          canWrite={writable}
+          runs={allRuns}
+          onChanged={reloadRuns}
+        />
+      )}
       {observation !== null && (
         <ObservationDrawer
           key={observation}

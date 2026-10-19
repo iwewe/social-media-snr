@@ -26,6 +26,10 @@ export const FIELD_LABELS: Record<string, string> = {
   status: "Status",
   observation_count: "Jumlah observasi",
   synthetic_data: "Data sintetis",
+  method: "Metode",
+  method_version: "Versi metode",
+  dataset_number: "Nomor dataset",
+  parameters_digest: "Digest parameter",
 };
 
 export interface ChangeRow {

@@ -21,6 +21,7 @@ from intelligence.m5 import ALTERNATIVE_TITLES, ResultTier
 from intelligence.models import (
     ActorIssueProfile,
     AnalysisRun,
+    DatasetVersion,
     DatasetVersionObservation,
     Finding,
     GraphEdge,
@@ -99,6 +100,7 @@ def run_repr(run: AnalysisRun, *, full: bool = False) -> dict[str, Any]:
             "observation_count": run.dataset_version.observation_count,
             "digest": run.dataset_version.observation_digest,
         },
+        "error": run.error,
         "previous_run": run.previous_run_id,
         "tier": None if tier is None else tier_repr(tier, MACHINE),
     }
@@ -822,4 +824,80 @@ def evidence_access_page(
             "Riwayat ini hanya dapat bertambah. Hash membuktikan berkas sama dengan saat disimpan, "
             "bukan keaslian konten platform."
         ),
+    }
+
+
+# --- memulai analisis (WP-2.9) ----------------------------------------------------------------
+
+CONTEXT_NOTE = (
+    "Catatan konteks target tersimpan dan berversi, tetapi TEKSNYA belum dibaca klasifier mesin. "
+    "Yang dipakai: stance awal target, cue yang Anda tulis, dan rantai balasan. Mengubah "
+    "penjelasan konteks saja tidak mengubah klasifikasi; baseline juga belum memahami negasi "
+    "secara umum, dan narrative function tidak diisi mesin."
+)
+
+
+def dataset_repr(d: DatasetVersion) -> dict[str, Any]:
+    return {
+        "id": d.pk,
+        "number": d.number,
+        "platform": d.platform,
+        "observation_count": d.observation_count,
+        "inspection_runs": len(d.selection.get("runs", [])),
+        "note": d.note,
+        "created_at": d.created_at.isoformat(),
+    }
+
+
+def setup_payload(investigation: Investigation) -> dict[str, Any]:
+    """Bahan formulir 'Jalankan analisis': dataset, pemeriksaan, proposition, run M2, contoh."""
+    from intelligence.examples import CO_EXAMPLE, EXPLORATORY_NOTE, M3_EXAMPLE, M4_EXAMPLE
+    from intelligence.services import INGESTED_STATES
+    from investigations.models import Proposition
+
+    datasets = DatasetVersion.objects.filter(investigation=investigation).order_by("-number")
+    runs = (
+        InspectionRun.objects.filter(
+            target__investigation=investigation, ingestion__state__in=INGESTED_STATES
+        )
+        .select_related("target")
+        .order_by("target_id", "sequence")
+    )
+    propositions = (
+        Proposition.objects.filter(issue__investigation=investigation, retired_at__isnull=True)
+        .select_related("issue")
+        .order_by("issue_id", "number")
+    )
+    m2_runs = AnalysisRun.objects.filter(
+        investigation=investigation, method__startswith="m2-", status="COMPLETED"
+    ).order_by("-id")
+    return {
+        "datasets": [dataset_repr(d) for d in datasets],
+        "inspection_runs": [
+            {
+                "id": r.pk,
+                "target_id": r.target_id,
+                "target_url": r.target.normalized_url,
+                "platform": r.target.platform,
+                "sequence": r.sequence,
+                "status": r.status,
+                "finished_at": _iso(r.finished_at),
+            }
+            for r in runs
+        ],
+        "propositions": [
+            {
+                "id": p.pk,
+                "label": p.label,
+                "statement": p.statement,
+                "issue": {"id": p.issue_id, "title": p.issue.title},
+            }
+            for p in propositions
+        ],
+        "m2_runs": [
+            {"id": r.pk, "dataset_id": r.dataset_version_id, "created_at": r.created_at.isoformat()}
+            for r in m2_runs
+        ],
+        "examples": {"m3": M3_EXAMPLE, "m4": M4_EXAMPLE, "co": CO_EXAMPLE},
+        "notes": {"exploratory": EXPLORATORY_NOTE, "context": CONTEXT_NOTE},
     }

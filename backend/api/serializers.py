@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 from audit.models import AuditAction, SubjectType
 from collection.contracts import Capability
+from intelligence.launch import METHODS
 from investigations.enums import Platform, Role, TargetType
 
 
@@ -169,3 +170,26 @@ class EvidenceAccessInput(PageInput):
     )
     user = serializers.CharField(max_length=150, required=False)
     artifact = serializers.IntegerField(min_value=1, required=False)
+
+
+class DatasetCreateInput(serializers.Serializer):
+    inspection_run_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1), allow_empty=False, max_length=500
+    )
+    note = serializers.CharField(max_length=500, allow_blank=True, required=False, default="")
+
+
+class AnalysisRunCreateInput(serializers.Serializer):
+    method = serializers.ChoiceField(choices=list(METHODS))
+    dataset_id = serializers.IntegerField(min_value=1)
+    proposition_id = serializers.IntegerField(
+        min_value=1, required=False, allow_null=True, default=None
+    )
+    source_run_id = serializers.IntegerField(
+        min_value=1, required=False, allow_null=True, default=None
+    )
+    parameters = serializers.DictField()
+
+
+class ReanalyzeInput(serializers.Serializer):
+    use_latest_context = serializers.BooleanField(required=False, default=False)

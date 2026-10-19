@@ -20,6 +20,7 @@ class AuditAction(models.TextChoices):
     FINDING_REVISE = "FINDING_REVISE", "Temuan direvisi"
     FINDING_ENDORSE = "FINDING_ENDORSE", "Temuan disahkan"
     FINDING_WITHDRAW = "FINDING_WITHDRAW", "Temuan ditarik"
+    ANALYSIS_RUN = "ANALYSIS_RUN", "Analisis dijalankan"
 
 
 class SubjectType(models.TextChoices):
@@ -27,6 +28,7 @@ class SubjectType(models.TextChoices):
     TARGET = "target", "Target"
     RESPONSE_ASSESSMENT = "response_assessment", "Klasifikasi respons"
     FINDING = "finding", "Temuan"
+    ANALYSIS_RUN = "analysis_run", "Analisis"
 
 
 class AuditEvent(AppendOnlyModel):

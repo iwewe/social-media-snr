@@ -33,6 +33,7 @@ from .models import (
 )
 
 _INGESTED = ("FINISHED", "FINISHED_WITH_PROBLEMS")
+INGESTED_STATES = _INGESTED  # publik: dipakai API untuk menawarkan run yang boleh dibekukan
 _BATCH = 1000
 
 
