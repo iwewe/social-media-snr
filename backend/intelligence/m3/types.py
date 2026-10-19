@@ -28,6 +28,10 @@ class ResponseRecord:
     text: str | None
     stance: str
     characters: tuple[str, ...]
+    # Satu Post = satu respons (observasi terbarunya). Dua angka di bawah melaporkan RIWAYAT-nya
+    # menjadikannya aktivitas tambahan: berapa kali Post itu teramati, dan berapa teks berbeda.
+    observation_count: int = 1
+    text_variants: int = 1
 
 
 @dataclass(frozen=True)

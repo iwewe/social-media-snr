@@ -345,6 +345,14 @@ export function NetworkPanel({
                         .join(", ")}
                     </div>
                   )}
+                  {detailNode.attributes.posts !== undefined && (
+                    <div className="muted" data-activity>
+                      Aktivitas: {detailNode.attributes.posts} Post unik
+                      {(detailNode.attributes.observations ?? 0) > detailNode.attributes.posts
+                        ? ` (${detailNode.attributes.observations} observasi historis; pemeriksaan ulang tidak menambah aktivitas)`
+                        : ""}
+                    </div>
+                  )}
                   <div className="muted">
                     Struktur: derajat masuk {detailNode.metrics.in_degree ?? 0}, keluar{" "}
                     {detailNode.metrics.out_degree ?? 0}

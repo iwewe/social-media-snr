@@ -155,10 +155,19 @@ def run_m3_profile(frozen: Any, parameters: dict[str, Any]) -> dict[str, Any]:
     without_author = outside_period = 0
     target_ids: set[int] = set()
     run_ids: set[int] = set()
-    for a in assessments:
+    # Satu Post = satu respons: penilaian dari observasi TERBARU (urutan run, lalu id). Observasi
+    # lama tetap bukti historis; jumlah dan perubahan teksnya dilaporkan terpisah, bukan dihitung
+    # sebagai aktivitas baru (FR-062; reinspection tanpa komentar baru tidak menambah aktivitas).
+    history: dict[int, list[Any]] = defaultdict(list)
+    for a in sorted(assessments, key=lambda x: (x.observation.run.sequence, x.observation_id)):
+        history[a.observation.post_id].append(a)
+    collapsed = sum(len(versions) - 1 for versions in history.values())
+    for versions in history.values():
+        for v in versions:  # cakupan mencatat SEMUA pemeriksaan yang berkontribusi
+            target_ids.add(v.observation.run.target_id)
+            run_ids.add(v.observation.run_id)
+        a = versions[-1]
         o = a.observation
-        target_ids.add(o.run.target_id)
-        run_ids.add(o.run_id)
         if o.author_id is None:
             without_author += 1
             continue
@@ -177,6 +186,8 @@ def run_m3_profile(frozen: Any, parameters: dict[str, Any]) -> dict[str, Any]:
                 text=o.text,
                 stance=a.issue_stance,
                 characters=tuple(a.response_character),
+                observation_count=len(versions),
+                text_variants=len({v.observation.text for v in versions}),
             )
         )
     dataset = run.dataset_version
@@ -218,6 +229,7 @@ def run_m3_profile(frozen: Any, parameters: dict[str, Any]) -> dict[str, Any]:
             ],
             "responses_excluded_outside_period": outside_period,
             "responses_without_author": without_author,
+            "observations_collapsed_into_unique_posts": collapsed,
         }
         coverage["statement"] = _statement(coverage)
         rows.append(
@@ -240,6 +252,7 @@ def run_m3_profile(frozen: Any, parameters: dict[str, Any]) -> dict[str, Any]:
         "responses_profiled": sum(len(v) for v in records.values()),
         "responses_without_author": without_author,
         "responses_excluded_outside_period": outside_period,
+        "observations_collapsed_into_unique_posts": collapsed,
         "dimensions": list(DIMENSIONS),
         "profiles_digest": digest_json(signature),
     }
@@ -248,4 +261,4 @@ def run_m3_profile(frozen: Any, parameters: dict[str, Any]) -> dict[str, Any]:
 def register() -> None:
     from .methods import REGISTRY, Method
 
-    REGISTRY["m3-profile"] = Method("m3-profile", "1", validate_m3_parameters, run_m3_profile)
+    REGISTRY["m3-profile"] = Method("m3-profile", "2", validate_m3_parameters, run_m3_profile)

@@ -407,6 +407,7 @@ export interface GraphNodeData {
   label: string;
   actor: ActorRef;
   attributes: {
+    posts?: number;
     observations?: number;
     responses_assessed?: number;
     stance_counts?: Record<string, number>;
@@ -505,7 +506,12 @@ export interface ProfileSummary {
   id: number;
   actor: ActorRef;
   level: string;
-  participation: DimensionResult & { responses?: number; distinct_targets?: number };
+  participation: DimensionResult & {
+    responses?: number;
+    observations?: number;
+    responses_with_changed_text?: number;
+    distinct_targets?: number;
+  };
   coverage_statement: string;
   partial_coverage: boolean;
 }
