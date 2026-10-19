@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import type { CoordinationRow, GraphPayload } from "../api/types";
-import { SIMILARITY_COLOR, buildElements, buildLegend } from "./graphElements";
+import {
+  IncompatibleAnalysisError,
+  SIMILARITY_COLOR,
+  buildElements,
+  buildLegend,
+  incompatibility,
+} from "./graphElements";
 
 const graph = {
   nodes: [
@@ -75,7 +81,15 @@ describe("buildElements", () => {
         (e) => e.classes === "similarity",
       ),
     ).toHaveLength(0);
-    const { elements } = buildElements(graph, [indicator], { showSimilarity: true });
+    const same = {
+      ...graph,
+      platform: "x",
+      run: { dataset: { id: 1 } },
+    } as unknown as GraphPayload;
+    const { elements } = buildElements(same, [indicator], {
+      showSimilarity: true,
+      coordination: { platform: "x", datasetId: 1 },
+    });
     const sim = elements.filter((e) => e.classes === "similarity");
     expect(sim).toHaveLength(1);
     expect(sim[0].data.kind).toBe("behavioral_similarity");
@@ -93,5 +107,49 @@ describe("buildLegend", () => {
       .join("");
     expect(withSim.length).toBeGreaterThan(without.length);
     expect(withSim.toLowerCase()).toContain("kemiripan");
+  });
+});
+
+describe("isolasi platform dan dataset pada penggabungan (FR-081)", () => {
+  const mk = (platform: string, datasetId: number) =>
+    ({ ...graph, platform, run: { dataset: { id: datasetId } } }) as unknown as GraphPayload;
+  const source = { platform: "x", datasetId: 1 };
+
+  it("incompatibility: platform sama dan dataset sama diterima", () => {
+    expect(incompatibility(mk("x", 1), source)).toBeNull();
+  });
+  it("incompatibility: platform berbeda ditolak dengan alasan menyebut kedua platform", () => {
+    const reason = incompatibility(mk("tiktok", 1), source) ?? "";
+    expect(reason).toContain("platform x");
+    expect(reason).toContain("platform tiktok");
+  });
+  it("incompatibility: dataset berbeda pada platform yang sama ditolak", () => {
+    expect(incompatibility(mk("x", 2), source)).toContain("dataset");
+  });
+  it("incompatibility: platform diperiksa lebih dulu daripada dataset", () => {
+    expect(incompatibility(mk("tiktok", 2), source)).toContain("platform");
+  });
+
+  it("buildElements menolak indikator TikTok pada graf X", () => {
+    expect(() =>
+      buildElements(mk("x", 1), [indicator], {
+        showSimilarity: true,
+        coordination: { platform: "tiktok", datasetId: 1 },
+      }),
+    ).toThrow(IncompatibleAnalysisError);
+  });
+  it("buildElements menolak indikator tanpa asal yang diketahui", () => {
+    expect(() => buildElements(mk("x", 1), [indicator], { showSimilarity: true })).toThrow(
+      IncompatibleAnalysisError,
+    );
+  });
+  it("buildElements menerima indikator yang sah dan tanpa indikator tidak butuh asal", () => {
+    const ok = buildElements(mk("x", 1), [indicator], {
+      showSimilarity: true,
+      coordination: source,
+    });
+    expect(ok.elements.some((e) => e.classes === "similarity")).toBe(true);
+    expect(() => buildElements(mk("x", 1), [], { showSimilarity: true })).not.toThrow();
+    expect(() => buildElements(mk("x", 1), [indicator], { showSimilarity: false })).not.toThrow();
   });
 });
