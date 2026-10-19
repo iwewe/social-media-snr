@@ -20,6 +20,12 @@ class IssueInput(serializers.Serializer):
     )
 
 
+class IssueContextInput(serializers.Serializer):
+    """Revisi konteks isu: versi BARU; versi lama tetap tersimpan (FR-014)."""
+
+    definition = serializers.CharField(allow_blank=True, trim_whitespace=False)
+
+
 class PropositionInput(serializers.Serializer):
     statement = serializers.CharField()
 

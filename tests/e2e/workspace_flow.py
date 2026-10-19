@@ -96,6 +96,16 @@ def main() -> None:
         expect(issue.get_by_text("P1", exact=True)).to_be_visible()
         step("issue dan proposition P1 tersimpan")
 
+        # 6b. Revisi konteks isu menjadi versi baru; versi lama tetap ada di riwayat (FR-014).
+        issue.get_by_role("button", name="Revisi konteks isu").click()
+        issue.get_by_label("Definisi / arahan konteks").fill("Konteks revisi dari E2E.")
+        issue.get_by_role("button", name="Simpan revisi").click()
+        expect(issue.get_by_text("Konteks revisi dari E2E.")).to_be_visible()
+        expect(issue.get_by_text("Konteks versi 2.")).to_be_visible()
+        issue.get_by_role("button", name="Lihat riwayat konteks (2)").click()
+        expect(issue.get_by_role("list", name="Riwayat konteks isu")).to_contain_text("Versi 1")
+        step("konteks isu direvisi ke versi 2; riwayat memuat versi 1")
+
         # 7. Daftarkan target dengan catatan dan posisi awal.
         target_form = page.locator("form:has(h3:has-text('Daftarkan target'))")
         target_form.get_by_label("Platform").select_option("x")

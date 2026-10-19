@@ -66,6 +66,11 @@ urlpatterns = [
     path("users/<int:pk>/activation/", views.UserActivationView.as_view(), name="user-activation"),
     path("users/<int:pk>/password/", views.UserPasswordView.as_view(), name="user-password"),
     path(
+        "issues/<int:pk>/context-versions/",
+        views.IssueContextReviseView.as_view(),
+        name="issue-context",
+    ),
+    path(
         "targets/<int:pk>/context-versions/",
         views.TargetContextReviseView.as_view(),
         name="target-context",

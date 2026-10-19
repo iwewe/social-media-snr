@@ -6,6 +6,7 @@ import type { InvestigationDetail, Meta } from "../api/types";
 import { useAuth } from "../auth/context";
 import { errorText } from "../api/errorText";
 import { ErrorMessage } from "../components/ErrorMessage";
+import { IssueContext } from "../components/IssueContext";
 import { IssueForm } from "../components/IssueForm";
 import { PropositionForm } from "../components/PropositionForm";
 import { RoleBadge } from "../components/RoleBadge";
@@ -70,7 +71,7 @@ export function InvestigationPage() {
         {detail.issues.map((issue) => (
           <article key={issue.id} className="card" aria-label={`Issue ${issue.title}`}>
             <h3>{issue.title}</h3>
-            {issue.context?.definition && <p className="note">{issue.context.definition}</p>}
+            <IssueContext issue={issue} writable={writable} onRevised={load} />
             {issue.propositions.length === 0 ? (
               <p className="muted">Belum ada proposition.</p>
             ) : (
