@@ -10,8 +10,19 @@ type Method = "m2-rules" | "m3-profile" | "m4-network" | "co-indicators";
 const METHODS = Object.keys(METHOD_LABELS) as Method[];
 const RELATIONS = ["reply_to", "quote_of", "repost_of", "mentions"];
 const POLL_MS = 3000;
+const NONE = -1; // pilihan "tanpa konteks" untuk target
 // Jendela lebar untuk tombol contoh: mencakup seluruh data; pengguna dapat mempersempitnya.
 const WIDE_START = "2000-01-01T00:00";
+
+const usesIssue = (method: Method, propositionId: number): boolean =>
+  propositionId !== 0 &&
+  (method === "m2-rules" || method === "m3-profile" || method === "m4-network");
+
+const versionLabel = (v: { version: number; text: string }, latest: boolean): string => {
+  const text = v.text.trim();
+  const preview = text.length > 60 ? `${text.slice(0, 60)}...` : text || "(kosong)";
+  return `Versi ${v.version}${latest ? " (terbaru)" : ""}: ${preview}`;
+};
 
 const lines = (text: string): string[] =>
   text
@@ -75,6 +86,9 @@ export function RunAnalysisPanel({
   const [betweenness, setBetweenness] = useState(false);
   const [busy, setBusy] = useState(false);
   const [latestContext, setLatestContext] = useState(false);
+  // 0 = belum dipilih (memakai versi terbaru); NONE = tanpa konteks (hanya target).
+  const [issueVersion, setIssueVersion] = useState(0);
+  const [targetVersions, setTargetVersions] = useState<Record<number, number>>({});
 
   const load = useCallback(
     () =>
@@ -109,6 +123,15 @@ export function RunAnalysisPanel({
   const needsProposition = method === "m2-rules" || method === "m3-profile";
   const needsSource = method === "m3-profile";
   const stanceView = method === "m4-network";
+  // Konteks yang dibekukan: isu dari proposition terpilih; target dari dataset terpilih.
+  const issueId = setup?.propositions.find((p) => p.id === propositionId)?.issue.id;
+  const issueInfo = usesIssue(method, propositionId)
+    ? setup?.issues.find((i) => i.id === issueId)
+    : undefined;
+  const datasetTargets = (setup?.targets ?? []).filter((t) => dataset?.target_ids.includes(t.id));
+  const effectiveIssue = issueInfo ? issueVersion || (issueInfo.versions[0]?.version ?? 0) : 0;
+  const effectiveTarget = (t: { id: number; versions: { version: number }[] }) =>
+    targetVersions[t.id] ?? t.versions[0]?.version ?? NONE;
 
   const num = (key: string) => numbers[key] ?? "";
   const setNum = (key: string) => (v: string) => setNumbers((cur) => ({ ...cur, [key]: v }));
@@ -189,6 +212,13 @@ export function RunAnalysisPanel({
         proposition_id: propositionId || null,
         source_run_id: sourceRunId || null,
         parameters: parameters(),
+        issue_context_version: issueInfo && effectiveIssue ? effectiveIssue : null,
+        target_context_versions: Object.fromEntries(
+          datasetTargets.map((t) => {
+            const v = effectiveTarget(t);
+            return [String(t.id), v === NONE ? null : v];
+          }),
+        ),
       })
       .then((run) => {
         setError(null);
@@ -491,6 +521,51 @@ export function RunAnalysisPanel({
                     dikirim eksplisit.
                   </span>
                 </p>
+              )}
+            </fieldset>
+            <fieldset data-context-versions>
+              <legend>3. Versi konteks yang dibekukan pada analisis ini</legend>
+              <p className="muted">
+                Default: versi terbaru. Pilih versi lama bila analisis harus mengikuti konteks yang
+                berlaku saat itu; pilihan dicatat pada analisis dan jejak audit.
+              </p>
+              {issueInfo && (
+                <label>
+                  Konteks isu: {issueInfo.title}
+                  <select
+                    aria-label="Versi konteks isu"
+                    value={effectiveIssue}
+                    onChange={(e) => setIssueVersion(Number(e.target.value))}
+                  >
+                    {issueInfo.versions.map((v, i) => (
+                      <option key={v.version} value={v.version}>
+                        {versionLabel(v, i === 0)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              {datasetTargets.map((t) => (
+                <label key={t.id}>
+                  Konteks target: {t.url}
+                  <select
+                    aria-label={`Versi konteks target ${t.id}`}
+                    value={effectiveTarget(t)}
+                    onChange={(e) =>
+                      setTargetVersions((cur) => ({ ...cur, [t.id]: Number(e.target.value) }))
+                    }
+                  >
+                    {t.versions.map((v, i) => (
+                      <option key={v.version} value={v.version}>
+                        {versionLabel(v, i === 0)}
+                      </option>
+                    ))}
+                    <option value={NONE}>Tanpa konteks target</option>
+                  </select>
+                </label>
+              ))}
+              {!issueInfo && datasetTargets.length === 0 && (
+                <p className="muted">Tidak ada konteks yang berlaku untuk pilihan ini.</p>
               )}
             </fieldset>
             <button type="submit" disabled={busy || datasetId === 0 || !dataset}>

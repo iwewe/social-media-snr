@@ -20,6 +20,7 @@ const SETUP: AnalysisSetup = {
       platform: "x",
       observation_count: 40,
       inspection_runs: 2,
+      target_ids: [1, 2],
       note: "",
       created_at: "2026-10-19T00:00:00Z",
     },
@@ -29,6 +30,7 @@ const SETUP: AnalysisSetup = {
       platform: "x",
       observation_count: 20,
       inspection_runs: 1,
+      target_ids: [1],
       note: "",
       created_at: "2026-10-18T00:00:00Z",
     },
@@ -59,6 +61,28 @@ const SETUP: AnalysisSetup = {
   m2_runs: [
     { id: 31, dataset_id: 2, created_at: "2026-10-19T01:00:00Z" },
     { id: 32, dataset_id: 1, created_at: "2026-10-18T01:00:00Z" },
+  ],
+  issues: [
+    {
+      id: 1,
+      title: "Isu",
+      versions: [
+        { version: 2, text: "Isu revisi", created_at: "2026-10-19T00:00:00Z" },
+        { version: 1, text: "Isu awal", created_at: "2026-10-18T00:00:00Z" },
+      ],
+    },
+  ],
+  targets: [
+    {
+      id: 1,
+      url: "https://x.com/u/status/1",
+      platform: "x",
+      versions: [
+        { version: 2, text: "Target revisi", created_at: "2026-10-19T00:00:00Z" },
+        { version: 1, text: "", created_at: "2026-10-18T00:00:00Z" },
+      ],
+    },
+    { id: 2, url: "https://x.com/u/status/2", platform: "x", versions: [] },
   ],
   examples: {
     m3: { min_responses: 2, bucket_hours: 24, min_active_buckets: 2, narrative_min_texts: 2 },
@@ -142,6 +166,8 @@ describe("RunAnalysisPanel", () => {
         pro_cues: ["harus diaudit", "audit harus dilakukan"],
         contra_cues: ["tidak perlu diaudit"],
       },
+      issue_context_version: 2,
+      target_context_versions: { "1": 2, "2": null },
     });
     expect(onChanged).toHaveBeenCalled();
   });
@@ -320,5 +346,67 @@ describe("RunAnalysisPanel", () => {
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Jalankan analisis" })).toBeDisabled(),
     );
+  });
+
+  it("versi konteks: default terbaru dikirim eksplisit; pilihan lama dan 'tanpa konteks' dikirim sesuai pilihan", async () => {
+    let sent:
+      | {
+          issue_context_version: number | null;
+          target_context_versions: Record<string, number | null>;
+        }
+      | undefined;
+    setupApi({
+      "POST /api/investigations/1/analysis-runs/": (body) => {
+        sent = body as typeof sent;
+        return { status: 202, body: run() };
+      },
+    });
+    render(<RunAnalysisPanel investigationId={1} canWrite runs={[]} onChanged={noop} />);
+    await userEvent.selectOptions(await screen.findByLabelText("Proposition"), "7");
+    await userEvent.type(screen.getByLabelText("Cue pro"), "harus diaudit");
+    const issue = screen.getByLabelText("Versi konteks isu") as HTMLSelectElement;
+    expect([...issue.options].map((o) => o.textContent)).toEqual([
+      "Versi 2 (terbaru): Isu revisi",
+      "Versi 1: Isu awal",
+    ]);
+    expect(issue.value).toBe("2");
+    await userEvent.selectOptions(issue, "1");
+    const t1 = screen.getByLabelText("Versi konteks target 1") as HTMLSelectElement;
+    expect([...t1.options].map((o) => o.textContent)).toContain("Versi 1: (kosong)");
+    await userEvent.selectOptions(t1, "1");
+    await userEvent.selectOptions(screen.getByLabelText("Versi konteks target 2"), "-1");
+    await userEvent.click(screen.getByRole("button", { name: "Jalankan analisis" }));
+    await screen.findByText(/dikirim ke worker/);
+    expect(sent?.issue_context_version).toBe(1);
+    expect(sent?.target_context_versions).toEqual({ "1": 1, "2": null });
+  });
+
+  it("konteks target mengikuti dataset terpilih dan konteks isu hanya muncul bila ada proposition", async () => {
+    setupApi();
+    render(<RunAnalysisPanel investigationId={1} canWrite runs={[]} onChanged={noop} />);
+    await screen.findByLabelText("Dataset");
+    expect(screen.queryByLabelText("Versi konteks isu")).toBeNull();
+    expect(screen.getByLabelText("Versi konteks target 2")).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText("Dataset"), "1"); // dataset 1 hanya target 1
+    expect(screen.queryByLabelText("Versi konteks target 2")).toBeNull();
+    expect(screen.getByLabelText("Versi konteks target 1")).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText("Metode"), "co-indicators");
+    expect(screen.queryByLabelText("Versi konteks isu")).toBeNull();
+  });
+
+  it("M4 tanpa stance view tidak mengirim versi konteks isu", async () => {
+    let sent: { issue_context_version: number | null } | undefined;
+    setupApi({
+      "POST /api/investigations/1/analysis-runs/": (body) => {
+        sent = body as typeof sent;
+        return { status: 202, body: run({ method: "m4-network" }) };
+      },
+    });
+    render(<RunAnalysisPanel investigationId={1} canWrite runs={[]} onChanged={noop} />);
+    await userEvent.selectOptions(await screen.findByLabelText("Metode"), "m4-network");
+    await userEvent.click(screen.getByRole("button", { name: "Isi contoh eksplorasi" }));
+    await userEvent.click(screen.getByRole("button", { name: "Jalankan analisis" }));
+    await screen.findByText(/dikirim ke worker/);
+    expect(sent?.issue_context_version).toBeNull();
   });
 });

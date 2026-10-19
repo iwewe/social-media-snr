@@ -1,5 +1,7 @@
 """Validasi masukan API. Aturan domain tetap dijaga oleh investigations.services."""
 
+from typing import Any
+
 from rest_framework import serializers
 
 from audit.models import AuditAction, SubjectType
@@ -195,6 +197,19 @@ class AnalysisRunCreateInput(serializers.Serializer):
         min_value=1, required=False, allow_null=True, default=None
     )
     parameters = serializers.DictField()
+    # Versi konteks yang dibekukan: kosong = terbaru. Kunci target = id target (teks angka).
+    issue_context_version = serializers.IntegerField(
+        min_value=1, required=False, allow_null=True, default=None
+    )
+    target_context_versions = serializers.DictField(
+        child=serializers.IntegerField(min_value=1, allow_null=True), required=False, default=dict
+    )
+
+    def validate_target_context_versions(self, value: dict[str, Any]) -> dict[int, int | None]:
+        try:
+            return {int(k): v for k, v in value.items()}
+        except ValueError:
+            raise serializers.ValidationError("kunci harus id target (angka)") from None
 
 
 class ReanalyzeInput(serializers.Serializer):

@@ -17,7 +17,12 @@ from django.utils import timezone
 
 from audit import services as audit
 from audit.models import AuditAction, SubjectType
-from investigations.models import Investigation, Proposition
+from investigations.models import (
+    Investigation,
+    IssueContextVersion,
+    Proposition,
+    TargetContextVersion,
+)
 
 from . import coordination_runs, profiles, services
 from .errors import InvalidParameters
@@ -174,6 +179,44 @@ def build_parameters(
     )
 
 
+def resolve_contexts(
+    *,
+    dataset: DatasetVersion,
+    proposition: Proposition | None,
+    issue_version: int | None,
+    target_versions: dict[int, int | None] | None,
+) -> tuple[IssueContextVersion | None, dict[int, TargetContextVersion | None]]:
+    """Versi konteks yang DIBEKUKAN pada run: terbaru bila tidak disebut, atau pilihan analis.
+
+    `target_versions`: id target -> nomor versi (None = tanpa konteks); target yang tidak
+    disebut memakai versi terbaru. Versi yang tidak ada atau target di luar dataset ditolak
+    (tidak ada tebakan diam-diam)."""
+    if issue_version is not None:
+        if proposition is None:
+            raise InvalidParameters(
+                "metode ini tidak memakai konteks isu; versi konteks isu tidak berlaku"
+            )
+        issue_ctx = IssueContextVersion.objects.filter(
+            issue=proposition.issue, version=issue_version
+        ).first()
+        if issue_ctx is None:
+            raise InvalidParameters(f"konteks isu versi {issue_version} tidak ada")
+    else:
+        issue_ctx = services.latest_issue_context(proposition.issue if proposition else None)
+    targets = dict(services.latest_target_contexts(dataset))
+    for target_id, version in (target_versions or {}).items():
+        if target_id not in targets:
+            raise InvalidParameters(f"target {target_id} tidak ada pada dataset ini")
+        if version is None:
+            targets[target_id] = None
+            continue
+        ctx = TargetContextVersion.objects.filter(target_id=target_id, version=version).first()
+        if ctx is None:
+            raise InvalidParameters(f"konteks target {target_id} versi {version} tidak ada")
+        targets[target_id] = ctx
+    return issue_ctx, targets
+
+
 def enqueue(run_pk: int) -> None:
     """Kirim ke antrean `analysis`; bila tak tersedia, run ditandai FAILED (tidak menggantung)."""
     from .tasks import execute_analysis
@@ -192,6 +235,15 @@ def enqueue(run_pk: int) -> None:
 def _audit_creation(
     run: AnalysisRun, by: User, *, reanalysis_of: AnalysisRun | None = None
 ) -> None:
+    contexts = {
+        "issue_context_version": run.issue_context_version.version
+        if run.issue_context_version
+        else None,
+        "target_context_versions": {
+            str(c.target_id): (c.context_version.version if c.context_version else None)
+            for c in run.target_contexts.select_related("context_version")
+        },
+    }
     audit.record(
         investigation_id=run.investigation_id,
         actor=by,
@@ -210,6 +262,7 @@ def _audit_creation(
             "method_version": run.method_version,
             "dataset_number": run.dataset_version.number,
             "parameters_digest": run.parameters_digest,
+            **contexts,
         },
     )
 
@@ -223,6 +276,8 @@ def launch(
     data: dict[str, Any],
     proposition_id: int | None = None,
     source_run_id: int | None = None,
+    issue_context_version: int | None = None,
+    target_context_versions: dict[int, int | None] | None = None,
 ) -> AnalysisRun:
     parameters, proposition = build_parameters(
         investigation=investigation,
@@ -232,16 +287,20 @@ def launch(
         proposition_id=proposition_id,
         source_run_id=source_run_id,
     )
+    issue_ctx, target_ctx = resolve_contexts(
+        dataset=dataset,
+        proposition=proposition,
+        issue_version=issue_context_version,
+        target_versions=target_context_versions,
+    )
     with transaction.atomic():
         run = services.create_analysis_run(
             dataset=dataset,
             method=method,
             parameters=parameters,
             by=by,
-            issue_context_version=services.latest_issue_context(
-                proposition.issue if proposition else None
-            ),
-            target_context_versions=services.latest_target_contexts(dataset),
+            issue_context_version=issue_ctx,
+            target_context_versions=target_ctx,
         )
         _audit_creation(run, by)
         transaction.on_commit(lambda: enqueue(run.pk))
