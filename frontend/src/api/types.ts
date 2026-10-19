@@ -675,7 +675,14 @@ export interface DatasetInfo {
   platform: Platform;
   observation_count: number;
   inspection_runs: number;
+  target_ids: number[];
   note: string;
+  created_at: string;
+}
+
+export interface ContextVersionInfo {
+  version: number;
+  text: string;
   created_at: string;
 }
 
@@ -697,6 +704,8 @@ export interface AnalysisSetup {
     issue: { id: number; title: string };
   }[];
   m2_runs: { id: number; dataset_id: number; created_at: string }[];
+  issues: { id: number; title: string; versions: ContextVersionInfo[] }[];
+  targets: { id: number; url: string; platform: Platform; versions: ContextVersionInfo[] }[];
   examples: {
     m3: Record<string, number>;
     m4: Record<string, unknown>;

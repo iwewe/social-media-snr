@@ -844,6 +844,7 @@ def dataset_repr(d: DatasetVersion) -> dict[str, Any]:
         "platform": d.platform,
         "observation_count": d.observation_count,
         "inspection_runs": len(d.selection.get("runs", [])),
+        "target_ids": d.selection.get("targets", []),
         "note": d.note,
         "created_at": d.created_at.isoformat(),
     }
@@ -853,7 +854,7 @@ def setup_payload(investigation: Investigation) -> dict[str, Any]:
     """Bahan formulir 'Jalankan analisis': dataset, pemeriksaan, proposition, run M2, contoh."""
     from intelligence.examples import CO_EXAMPLE, EXPLORATORY_NOTE, M3_EXAMPLE, M4_EXAMPLE
     from intelligence.services import INGESTED_STATES
-    from investigations.models import Proposition
+    from investigations.models import CollectionTarget, Issue, Proposition
 
     datasets = DatasetVersion.objects.filter(investigation=investigation).order_by("-number")
     runs = (
@@ -868,6 +869,8 @@ def setup_payload(investigation: Investigation) -> dict[str, Any]:
         .select_related("issue")
         .order_by("issue_id", "number")
     )
+    issues = Issue.objects.filter(investigation=investigation).order_by("pk")
+    targets = CollectionTarget.objects.filter(investigation=investigation).order_by("pk")
     m2_runs = AnalysisRun.objects.filter(
         investigation=investigation, method__startswith="m2-", status="COMPLETED"
     ).order_by("-id")
@@ -897,6 +900,33 @@ def setup_payload(investigation: Investigation) -> dict[str, Any]:
         "m2_runs": [
             {"id": r.pk, "dataset_id": r.dataset_version_id, "created_at": r.created_at.isoformat()}
             for r in m2_runs
+        ],
+        "issues": [
+            {
+                "id": i.pk,
+                "title": i.title,
+                "versions": [
+                    {
+                        "version": v.version,
+                        "text": v.definition,
+                        "created_at": v.created_at.isoformat(),
+                    }
+                    for v in i.context_versions.order_by("-version")
+                ],
+            }
+            for i in issues
+        ],
+        "targets": [
+            {
+                "id": t.pk,
+                "url": t.normalized_url,
+                "platform": t.platform,
+                "versions": [
+                    {"version": v.version, "text": v.note, "created_at": v.created_at.isoformat()}
+                    for v in t.context_versions.order_by("-version")
+                ],
+            }
+            for t in targets
         ],
         "examples": {"m3": M3_EXAMPLE, "m4": M4_EXAMPLE, "co": CO_EXAMPLE},
         "notes": {"exploratory": EXPLORATORY_NOTE, "context": CONTEXT_NOTE},

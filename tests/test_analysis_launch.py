@@ -496,3 +496,109 @@ def test_reanalysis_uses_the_latest_issue_context_only_when_asked(
         {"use_latest_context": latest},
     )
     assert res.status_code == 202 and res.json()["issue_context_version"] == expected
+
+
+# --- versi konteks yang dibekukan (A2) ---------------------------------------------------------
+
+
+def ctx_of(run_json):
+    return run_json["issue_context_version"], {
+        c["target_id"]: c["version"] for c in run_json["target_contexts"]
+    }
+
+
+def revise_both(world):  # noqa: F811
+    inv_services.revise_issue_context(issue=world.issue, user=world.owner, definition="Isu v2.")
+    inv_services.revise_target_context(target=world.target, user=world.owner, note="Target v2.")
+
+
+def test_setup_lists_every_context_version_newest_first_and_dataset_targets(world) -> None:  # noqa: F811
+    revise_both(world)
+    data = get_json(world, f"/api/investigations/{world.inv.pk}/analysis-setup/")
+    issue = next(i for i in data["issues"] if i["id"] == world.issue.pk)
+    assert [v["version"] for v in issue["versions"]] == [2, 1]
+    assert issue["versions"][0]["text"] == "Isu v2."
+    target = next(t for t in data["targets"] if t["id"] == world.target.pk)
+    assert [v["version"] for v in target["versions"]] == [2, 1]
+    assert target["versions"][0]["text"] == "Target v2."
+    dataset = next(d for d in data["datasets"] if d["id"] == world.dataset.pk)
+    assert world.target.pk in dataset["target_ids"]
+
+
+def test_without_an_explicit_choice_the_latest_contexts_are_frozen(world, queued) -> None:  # noqa: F811
+    revise_both(world)
+    issue_v, targets = ctx_of(launch(world, m2_body(world)).json())
+    assert issue_v == 2 and targets[world.target.pk] == 2
+
+
+def test_an_explicit_older_version_is_what_gets_frozen_and_audited(world, queued) -> None:  # noqa: F811
+    revise_both(world)
+    body = m2_body(
+        world,
+        issue_context_version=1,
+        target_context_versions={str(world.target.pk): 1},
+    )
+    res = launch(world, body)
+    assert res.status_code == 202, res.content[:300]
+    issue_v, targets = ctx_of(res.json())
+    assert issue_v == 1 and targets[world.target.pk] == 1
+    event = AuditEvent.objects.filter(
+        action=AuditAction.ANALYSIS_RUN, subject_id=res.json()["id"]
+    ).get()
+    assert event.after["issue_context_version"] == 1
+    assert event.after["target_context_versions"] == {str(world.target.pk): 1}
+
+
+def test_a_target_can_be_frozen_without_context_and_unlisted_targets_use_the_latest(
+    world, queued
+) -> None:  # noqa: F811
+    revise_both(world)
+    res = launch(world, m2_body(world, target_context_versions={str(world.target.pk): None}))
+    issue_v, targets = ctx_of(res.json())
+    assert targets[world.target.pk] is None and issue_v == 2
+    only_issue = launch(world, m2_body(world, issue_context_version=1))
+    issue_v, targets = ctx_of(only_issue.json())
+    assert issue_v == 1 and targets[world.target.pk] == 2
+
+
+@pytest.mark.parametrize(
+    ("extra", "message"),
+    [
+        ({"issue_context_version": 99}, "konteks isu versi 99 tidak ada"),
+        ({"target_context_versions": {"999999": 1}}, "tidak ada pada dataset ini"),
+        ({"target_context_versions": {"TARGET": 99}}, "versi 99 tidak ada"),
+    ],
+)
+def test_unknown_versions_and_foreign_targets_are_rejected_clearly(
+    world, queued, extra, message
+) -> None:  # noqa: F811
+    if "TARGET" in extra.get("target_context_versions", {}):
+        extra = {"target_context_versions": {str(world.target.pk): 99}}
+    before = AnalysisRun.objects.count()
+    res = launch(world, m2_body(world, **extra))
+    assert res.status_code == 400 and message in res.json()["detail"], res.content[:300]
+    assert AnalysisRun.objects.count() == before
+
+
+def test_target_outside_the_dataset_is_rejected_even_if_it_exists(world, other, queued) -> None:  # noqa: F811
+    foreign = other.run.target_id
+    res = launch(world, m2_body(world, target_context_versions={str(foreign): 1}))
+    assert res.status_code == 400 and "tidak ada pada dataset ini" in res.json()["detail"]
+
+
+def test_an_issue_version_is_rejected_for_methods_without_an_issue(world, queued) -> None:  # noqa: F811
+    res = launch(
+        world,
+        {
+            "method": "co-indicators",
+            "dataset_id": world.dataset.pk,
+            "issue_context_version": 1,
+            "parameters": {"window_start": START, "window_end": END, **CO_EXAMPLE},
+        },
+    )
+    assert res.status_code == 400 and "tidak memakai konteks isu" in res.json()["detail"]
+
+
+@pytest.mark.parametrize("bad", [{"abc": 1}, {"1": "x"}, {"1": 0}])
+def test_malformed_target_version_maps_are_rejected(world, queued, bad) -> None:  # noqa: F811
+    assert launch(world, m2_body(world, target_context_versions=bad)).status_code == 400

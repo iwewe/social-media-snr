@@ -91,6 +91,8 @@ class AnalysisRunListView(ApiView):
             data=data["parameters"],
             proposition_id=data.get("proposition_id"),
             source_run_id=data.get("source_run_id"),
+            issue_context_version=data.get("issue_context_version"),
+            target_context_versions=data.get("target_context_versions") or None,
         )
         return Response(analysis.run_repr(run, full=True), status=202)
 
